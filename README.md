@@ -3,6 +3,9 @@ https://www.kaggle.com/c/nyc-taxi-trip-duration/overview
 # Actual Notes
 
 - Bearbeiten der Wetterdaten
+  - 1. [ ] Zeitstempel vereinheitlichen (z.B. floor('h'))
+  - amerikanische einheiten in metrische umwandeln
+
 ***
 
 - Welche Merkmale (z. B. Startzeitpunkt, geografische Lage) sind am aussagekräftigsten für die Vorhersage der
@@ -13,9 +16,10 @@ https://www.kaggle.com/c/nyc-taxi-trip-duration/overview
   Windgeschwindigkeit, Niederschlagsmenge) verbessern?
 
 # Workflow
-## Get the Data
 
-## NYC Taxi Trips Duration
+### NYC Taxi Trips Duration Data
+
+- Not up to date
 
 **File descriptions**
 
@@ -39,7 +43,9 @@ https://www.kaggle.com/c/nyc-taxi-trip-duration/overview
   forward trip
 * **trip_duration** - duration of the trip in seconds
 
-## 2016 Jan-June NYC Weather, hourly
+### 2016 Jan-June NYC Weather, hourly
+
+- Not up to date
 
 **Data fields for 1/1/16 - 7/1/16**
 
@@ -61,31 +67,16 @@ https://www.kaggle.com/c/nyc-taxi-trip-duration/overview
 ### Weatherdata
 
 **How are the weather datapoints distributed?**
-
-Maßnahmen
-
-Vor dem Mergen mit Taxi-Daten müssen wir:
-
-1. [ ] Zeitstempel vereinheitlichen (z.B. floor('h'))
-2. [ ] Nur repräsentative Messzeitpunkte behalten (z.B. minute == 51)
-3. [ ] Evtl. fehlende Stunden interpolieren oder ignorieren (abhängig vom Modell)
-
+- done
 
 **Minutenverteilung prüfen**
-
-Maßnahmen
-
-* Wir können und sollten ausschließlich Zeilen mit minute == 51 verwenden.
-  * Damit stellen wir sicher, dass wir eine konsistente Messung pro Stunde verwenden.
-  * Restliche Minuten werden ignoriert, da sie inkonsistent und potenziell redundant sind.
+- done
 
 **Dubletten prüfen**
-
-Maßnahmen
-
-Vor der Aggregation auf Stundenebene sollten wir:
-
-1. [ ] doppelte Einträge aggregieren, z.B. Mittelwert oder dominanten Zustand wählen.
-2. [ ] alternativ: nur den ersten Eintrag behalten (vereinfachte Lösung, aber potenzieller Informationsverlust).
+- done
 
 **Wetterdaten sinnvoll auf Stundenbasis aggregieren**
+- done
+
+**Daten umwandeln**
+- to be done
