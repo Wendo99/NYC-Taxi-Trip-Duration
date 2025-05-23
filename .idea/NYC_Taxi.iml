@@ -4,6 +4,7 @@
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/data" />
       <excludeFolder url="file://$MODULE_DIR$/data_packages" />
+      <excludeFolder url="file://$MODULE_DIR$/misc" />
     </content>
     <orderEntry type="jdk" jdkName="NYC_Taxi" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
