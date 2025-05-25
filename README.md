@@ -2,9 +2,9 @@ https://www.kaggle.com/c/nyc-taxi-trip-duration/overview
 
 # Actual Notes
 
-- Bearbeiten der Wetterdaten
-  - 1. [ ] Zeitstempel vereinheitlichen (z.B. floor('h'))
-  - amerikanische einheiten in metrische umwandeln
+- Exploration of Weather
+  - Check out Outliers 
+  - Maybe Capping 
 
 ***
 
@@ -62,21 +62,3 @@ https://www.kaggle.com/c/nyc-taxi-trip-duration/overview
 * currently raining (boolean)
 * currently snowing (boolean)
 
-## Analyze and Explore Data
-
-### Weatherdata
-
-**How are the weather datapoints distributed?**
-- done
-
-**Minutenverteilung prüfen**
-- done
-
-**Dubletten prüfen**
-- done
-
-**Wetterdaten sinnvoll auf Stundenbasis aggregieren**
-- done
-
-**Daten umwandeln**
-- to be done
