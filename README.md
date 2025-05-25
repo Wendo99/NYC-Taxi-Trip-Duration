@@ -1,12 +1,23 @@
 https://www.kaggle.com/c/nyc-taxi-trip-duration/overview
 
-# Actual Notes
+### TODO
 
 - Exploration of Weather
-  - Check out Outliers 
-  - Maybe Capping 
-
-***
+    - Check out Outliers
+    - Maybe Capping
+- Exploration of Taxi
+    - Some trip durations extend to more than 3 hours
+    - Some trip durations are less than 60 secs
+    - Some trip locations are probably outside of New York
+    - Some trips do end at start location after 5 min trip
+    - Some trips do have more than 6 passengers
+    - Remove or filter coordinates outside the approximate bounds of NYC
+    - Optionally define bounding boxes for boroughs or airports for further geographic feature engineering
+    - Optionally bin passenger_count into simplified categories: solo, small group (2–4), full load (5–6), unknown (0,>6)
+    - Use the log-transformed trip_duration_log as target variable for regression models.
+    - Use pickup_hourofyear for weather-data joins.
+  
+### Long term Exploration
 
 - Welche Merkmale (z. B. Startzeitpunkt, geografische Lage) sind am aussagekräftigsten für die Vorhersage der
   Reisedauer?
@@ -14,8 +25,6 @@ https://www.kaggle.com/c/nyc-taxi-trip-duration/overview
   prognostizieren?
 - Lässt sich die Vorhersagequalität durch die Integration von Wetterdaten (Temperatur, Luftfeuchtigkeit,
   Windgeschwindigkeit, Niederschlagsmenge) verbessern?
-
-# Workflow
 
 ### NYC Taxi Trips Duration Data
 
