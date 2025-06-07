@@ -1,0 +1,3 @@
+def remove_invalid_locations(df, lat_range=(40.47, 41.0),
+    lon_range=(-74.3, -73.6)):
+  ...
