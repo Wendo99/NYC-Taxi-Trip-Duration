@@ -24,7 +24,11 @@ def load_taxi_data():
   if not zip_path.is_file():
     data_dir.mkdir(parents=True, exist_ok=True)
     api = KaggleApi()
-    api.authenticate()
+    try:
+      api.authenticate()
+    except Exception as e:
+      raise RuntimeError("Kaggle API authentication failed. "
+                         "Stelle sicher, dass ~/.kaggle/kaggle.json existiert.") from e
     api.competition_download_files("nyc-taxi-trip-duration", path=data_dir)
 
   # Step 2: Unpack ZIP only if inner ZIPs are missing
@@ -44,7 +48,10 @@ def load_taxi_data():
         if member.endswith(".csv"):
           target_file = extracted_dir / Path(member).name
           if not target_file.is_file():
-            zip_ref.extract(member, path=extracted_dir)
+            target_file = extracted_dir / Path(member).name
+            if not target_file.is_file():
+              with zip_ref.open(member) as src, open(target_file, "wb") as dst:
+                dst.write(src.read())
 
   # Step 4: Load CSV and save pkl cache
   if not csv_path.is_file():
@@ -79,7 +86,11 @@ def load_weather_data():
   if not zip_path.is_file():
     package_dir.mkdir(parents=True, exist_ok=True)
     api = KaggleApi()
-    api.authenticate()
+    try:
+      api.authenticate()
+    except Exception as e:
+      raise RuntimeError("Kaggle API authentication failed. "
+                         "Stelle sicher, dass ~/.kaggle/kaggle.json existiert.") from e
     api.dataset_download_files(dataset_slug, path=str(package_dir), unzip=False)
 
   # Schritt 2: Entpacken, falls CSV noch nicht existiert
@@ -91,7 +102,7 @@ def load_weather_data():
   # Schritt 3: CSV laden und Cache schreiben
   if not csv_path.is_file():
     raise FileNotFoundError(
-      f"{csv_path} wurde nicht gefunden – Entpackung fehlgeschlagen.")
+        f"{csv_path} wurde nicht gefunden – Entpackung fehlgeschlagen.")
 
   df = pd.read_csv(csv_path)
   with open(pkl_path, "wb") as f:

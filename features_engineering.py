@@ -18,6 +18,8 @@ def add_weather_features(df):
 
 
 def add_correct_measurements_weather_features(df):
+  df['dailyprecip'] = pd.to_numeric(df['dailyprecip'], errors='coerce')
+  df['dailysnow'] = pd.to_numeric(df['dailysnow'], errors='coerce')
   df['temp_c'] = (df['temp'] - 32) * 5 / 9
   df['windspeed_kph'] = df['windspeed'] * 1.60934
   df['precip_mm'] = df['precip'] * 25.4
@@ -107,7 +109,7 @@ def classify_cloud_label(x):
   elif x == "Overcast":
     return "overcast"  # >90%
   else:
-    return "unknown"
+    return 'unknown'
 
 
 def classify_haze(df):
@@ -143,7 +145,7 @@ def classify_freezing_label(x):
   elif x == "Light Freezing Rain":
     return 'light_freezing_rain'
   else:
-    return "none"
+    return 'unknown'
 
 
 def classify_fog(df):
@@ -161,7 +163,7 @@ def classify_fog_label(x):
     return "fog"
   elif x == 0:
     return 'no_fog'
-  return None
+  return 'unknown'
 
 
 def classify_temp(df):
@@ -191,7 +193,7 @@ def classify_temp_label(t):
   elif t < 25:
     return "warm"
   else:
-    return "hot"
+    return 'unknown'
 
 
 def classify_windspeed(df):
@@ -221,7 +223,7 @@ def classify_wind_label(speed):
   elif speed < 75:
     return 'strong_breeze'
   else:
-    return "stormy"
+    return 'unknown'
 
 
 def classify_humidity(df):
@@ -249,7 +251,7 @@ def classify_humidity_label(h):
   elif h <= 85:
     return 'wet'
   else:
-    return 'very_wet'
+    return 'unknown'
 
 
 def classify_pressure(df):
@@ -276,7 +278,7 @@ def classify_pressure_label(p):
   elif p < 1030:
     return "high"
   else:
-    return 'very_high'
+    return 'unknown'
 
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -329,13 +331,6 @@ def add_weather_time_features(df, timestamp_col='timestamp'):
   return df
 
 
-def interpolate_columns(df, cols, time_index='datetime_hour'):
-  df = df.set_index(time_index)
-  for col in cols:
-    df[col] = df[col].interpolate(method='time')
-  return df.reset_index()
-
-
 def add_taxi_time_features(df, col='pickup_datetime'):
   df[col] = pd.to_datetime(df[col])
   df['dropoff_datetime'] = pd.to_datetime(df['dropoff_datetime'])
@@ -355,10 +350,12 @@ def add_taxi_distance_features(df):
                                 df['dropoff_longitude'])
   return df
 
+
 def add_trip_duration_features(df):
   df['trip_duration_min'] = df['trip_duration'] / 60
   df['trip_duration_log'] = np.log1p(df['trip_duration'])
   return df
+
 
 def add_same_location_flag(df, precision=5):
   df['is_same_location'] = (
@@ -369,3 +366,24 @@ def add_same_location_flag(df, precision=5):
                              'dropoff_longitude'].round(precision)
                            )
   return df
+
+
+def aggregate_weather_hourly(df):
+  return (
+    df.groupby('datetime_hour')
+    .agg({
+      'temp': 'mean',
+      'windspeed': 'mean',
+      'humidity': 'mean',
+      'precip': 'sum',
+      'pressure': 'mean',
+      'dailyprecip': 'first',
+      'dailysnow': 'first',
+      'fog': 'max',
+      'rain': 'max',
+      'snow': 'max',
+      'conditions': lambda x: x.mode().iloc[0] if not x.mode().empty else
+      x.iloc[0]
+    })
+    .reset_index()
+  )
