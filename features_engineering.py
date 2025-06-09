@@ -129,7 +129,7 @@ def classify_haze_label(x):
 
 def classify_freezing(df):
   freezing_mapping = {
-    "none": 0,
+    "unknown": 0,
     'light_freezing_rain': 1,
     'light_freezing_fog': 2
   }
@@ -182,16 +182,18 @@ def classify_temp(df):
 
 
 def classify_temp_label(t):
-  if t < -5:
+  if t <= -5:
     return 'very_cold'
-  elif t < 5:
+  elif t <= 5:
     return "cold"
-  elif t < 15:
+  elif t <= 15:
     return "cool"
-  elif t < 20:
+  elif t <= 20:
     return "mild"
-  elif t < 25:
+  elif t <= 25:
     return "warm"
+  elif t > 25:
+    return "hot"
   else:
     return 'unknown'
 
@@ -212,16 +214,18 @@ def classify_windspeed(df):
 
 
 def classify_wind_label(speed):
-  if speed < 1:
+  if speed <= 1:
     return "calm"
-  elif speed < 12:
+  elif speed <= 12:
     return 'light_air'
-  elif speed < 29:
+  elif speed <= 29:
     return 'light_breeze'
-  elif speed < 50:
+  elif speed <= 50:
     return 'moderate_breeze'
-  elif speed < 75:
+  elif speed <= 75:
     return 'strong_breeze'
+  elif speed > 75:
+    return 'stormy'
   else:
     return 'unknown'
 
@@ -250,6 +254,8 @@ def classify_humidity_label(h):
     return 'normal'
   elif h <= 85:
     return 'wet'
+  elif h > 85:
+    return 'very_wet'
   else:
     return 'unknown'
 
@@ -269,14 +275,16 @@ def classify_pressure(df):
 
 
 def classify_pressure_label(p):
-  if p < 980:
+  if p <= 980:
     return 'very_low'
-  elif p < 1000:
+  elif p <= 1000:
     return "low"
-  elif p < 1020:
+  elif p <= 1020:
     return "normal"
-  elif p < 1030:
+  elif p <= 1030:
     return "high"
+  elif p > 1030:
+    return "very_high"
   else:
     return 'unknown'
 
