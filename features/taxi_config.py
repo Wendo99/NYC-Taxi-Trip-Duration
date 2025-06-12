@@ -1,0 +1,10 @@
+LAT_RANGE = (40.47, 41.0)
+LON_RANGE = (-74.3, -73.6)
+
+
+# Latitude
+NYC_LAT_MIN = 40.47
+NYC_LAT_MAX = 41.0
+# Longitude
+NYC_LON_MIN = -74.3
+NYC_LON_MAX = -73.6

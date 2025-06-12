@@ -1,6 +1,7 @@
 import pickle
 from pathlib import Path
 from zipfile import ZipFile
+import config as cf
 
 import pandas as pd
 from kaggle.api.kaggle_api_extended import KaggleApi
@@ -56,8 +57,8 @@ def extract_csv_from_zip(zip_path, csv_name, target_dir):
 def load_taxi_data():
   """Load NYC taxi trip data with optional caching and Kaggle download."""
   download_file_name = "nyc-taxi-trip-duration.zip"
-  data_dir = Path("data_packages")
-  extracted_dir = Path("data")
+  data_dir = Path(cf.PACKAGE_DIR)
+  extracted_dir = Path(cf.TAXI_DATA_RAW_DIR)
   csv_path = extracted_dir / "train.csv"
   pkl_path = extracted_dir / "train.pkl"
 
@@ -100,12 +101,12 @@ def load_weather_data():
   zip_name = "nyc-taxi-wunderground-weather.zip"
   csv_name = "weatherdata.csv"
 
-  data_dir = Path("data")
-  package_dir = Path("data_packages")
+  data_dir = Path(cf.WEATHER_DATA_RAW_DIR)
+  package_dir = Path(cf.PACKAGE_DIR)
 
   zip_path = package_dir / zip_name
   csv_path = data_dir / csv_name
-  pkl_path = data_dir / "weatherdata.pkl"
+  pkl_path = data_dir / "weather_data_raw.pkl"
 
   # Step 0: Use cache if available
   if pkl_path.is_file():

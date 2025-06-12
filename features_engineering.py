@@ -1,9 +1,11 @@
 import numpy as np
-import pandas as pd
+
+from features.distances import haversine
 
 
-def add_weather_features(df):
-  add_correct_measurements_weather_features(df)
+# Weather
+
+def add_classified_weather_features(df):
   classify_rain(df)
   classify_snow(df)
   classify_clouds(df)
@@ -17,46 +19,46 @@ def add_weather_features(df):
   return df
 
 
-def add_correct_measurements_weather_features(df):
-  df['dailyprecip'] = pd.to_numeric(df['dailyprecip'], errors='coerce')
-  df['dailysnow'] = pd.to_numeric(df['dailysnow'], errors='coerce')
-  df['temp_c'] = (df['temp'] - 32) * 5 / 9
-  df['windspeed_kph'] = df['windspeed'] * 1.60934
-  df['precip_mm'] = df['precip'] * 25.4
-  df['pressure_hPa'] = df['pressure'] * 33.8639
-  df['precip_daily_mm'] = df['dailyprecip'] * 25.4
-  df['daily_snow_mm'] = df['dailysnow'] * 25.4
+# rain
+
+def classify_rain_label(x):
+  if abs(x - 0.0) < 1e-9:
+    return 'no_rain'
+  elif x < 0.25:
+    return 'trace_rain'
+  elif x < 2.5:
+    return 'light_rain'
+  elif x < 10.0:
+    return 'moderate_rain'
+  elif x >= 10:
+    return 'heavy_rain'
+  elif x >= 50:
+    return 'very_heavy_rain'
+  return None
 
 
 def classify_rain(df):
+  """
+  Classifies and codes hourly precipitation levels.
+
+  Adds two columns:
+  - rain_class: label (e.g. 'light_rain')
+  - rain_code: ordinal code (e.g. 1)
+  """
   rain_mapping = {
     'no_rain': 0,
-    'light_rain': 1,
-    'moderate_rain': 2,
-    'heavy_rain': 3,
-    'very_heavy_rain': 4,
-    'extreme_rain': 5
+    'trace_rain': 1,
+    'light_rain': 2,
+    'moderate_rain': 3,
+    'heavy_rain': 4,
+    'very_heavy_rain': 5
   }
-  df['rain_class'] = df['precip_mm'].apply(
-      classify_rain_label)
-  df['rain_code'] = df['rain_class'].map(
-      rain_mapping)
+
+  df['rain_class'] = df['precip_mm'].apply(classify_rain_label)
+  df['rain_code'] = df['rain_class'].map(rain_mapping)
 
 
-def classify_rain_label(x):
-  if x >= 30:
-    return 'extreme_rain'
-  elif x >= 15:
-    return 'very_heavy_rain'
-  elif x >= 7.5:
-    return 'heavy_rain'
-  elif x >= 2.5:
-    return 'moderate_rain'
-  elif x > 0:
-    return 'light_rain'
-  else:
-    return 'no_rain'
-
+# snow
 
 def classify_snow(df):
   snow_mapping = {
@@ -81,6 +83,8 @@ def classify_snow_label(x):
   else:
     return 'no_snow'
 
+
+# clouds
 
 def classify_clouds(df):
   cloud_mapping = {
@@ -112,6 +116,8 @@ def classify_cloud_label(x):
     return 'unknown'
 
 
+# haze
+
 def classify_haze(df):
   haze_mapping = {
     'no_haze': 0,
@@ -126,6 +132,8 @@ def classify_haze(df):
 def classify_haze_label(x):
   return "haze" if x == "Haze" else 'no_haze'
 
+
+# freezing
 
 def classify_freezing(df):
   freezing_mapping = {
@@ -148,6 +156,8 @@ def classify_freezing_label(x):
     return 'unknown'
 
 
+# fog
+
 def classify_fog(df):
   fog_mapping = {
     "fog": 1,
@@ -165,6 +175,8 @@ def classify_fog_label(x):
     return 'no_fog'
   return 'unknown'
 
+
+# temp
 
 def classify_temp(df):
   temp_mapping = {
@@ -198,14 +210,22 @@ def classify_temp_label(t):
     return 'unknown'
 
 
+# windspeed
 def classify_windspeed(df):
   windspeed_mapping = {
     "calm": 0,
     'light_air': 1,
     'light_breeze': 2,
-    'moderate_breeze': 3,
-    'strong_breeze': 4,
-    "stormy": 5
+    'light_wind': 3,
+    'moderate_wind': 4,
+    "fresh_wind": 5,
+    "strong_wind": 6,
+    "stiff_wind": 7,
+    "stormy_wind": 8,
+    "storm": 9,
+    "heavy_storm": 10,
+    "hurricane_like_storm": 11,
+    "hurricane": 12
   }
   df['windspeed_class'] = df['windspeed_kph'].apply(
       classify_wind_label)
@@ -214,18 +234,32 @@ def classify_windspeed(df):
 
 
 def classify_wind_label(speed):
-  if speed <= 1:
+  if abs(speed - 0.0) < 1e-9:
     return "calm"
-  elif speed <= 12:
+  elif speed < 5:
     return 'light_air'
-  elif speed <= 29:
+  elif speed < 10:
     return 'light_breeze'
-  elif speed <= 50:
-    return 'moderate_breeze'
-  elif speed <= 75:
-    return 'strong_breeze'
-  elif speed > 75:
-    return 'stormy'
+  elif speed < 20:
+    return 'light_wind'
+  elif speed < 30:
+    return 'moderate_wind'
+  elif speed < 40:
+    return 'fresh_wind'
+  elif speed < 50:
+    return 'strong_wind'
+  elif speed < 65:
+    return 'stiff_wind'
+  elif speed < 75:
+    return 'stormy_wind'
+  elif speed < 90:
+    return 'storm'
+  elif speed < 105:
+    return 'heavy_storm'
+  elif speed < 120:
+    return 'hurricane_like_storm'
+  elif speed >= 120:
+    return 'hurricane'
   else:
     return 'unknown'
 
@@ -289,82 +323,6 @@ def classify_pressure_label(p):
     return 'unknown'
 
 
-def haversine(lat1, lon1, lat2, lon2):
-  r = 6378.135  # Earth's radius in km
-
-  # Convert latitude and longitude to radians
-  lat1, lon1, lat2, lon2 = map(np.radians, [lat1, lon1, lat2, lon2])
-
-  # Calculate the difference between the two coordinates
-  dlat = lat2 - lat1
-  dlon = lon2 - lon1
-
-  # Apply the haversine formula
-  a = (np.sin(dlat / 2)) ** 2 + (np.cos(lat1) * np.cos(lat2)) * (
-    np.sin(dlon / 2)) ** 2
-  c = 2 * r * np.arcsin(np.sqrt(a))
-
-  # Return the distance
-  return c
-
-
-def vincenty(lat1, lon1, lat2, lon2):
-  # Convert latitude and longitude to radians
-  lat1, lon1, lat2, lon2 = map(np.radians, [lat1, lon1, lat2, lon2])
-
-  # Calculate the difference between the two coordinates
-  dlat = lat2 - lat1
-  dlon = lon2 - lon1
-
-  # Apply the Vincenty formula
-  a = np.sin(dlat / 2) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(
-      dlon / 2) ** 2
-  c = 2 * np.atan2(np.sqrt(a), np.sqrt(1 - a))
-
-  # Calculate the ellipsoid parameters
-  f = 1 / 298.257223563  # flattening of the Earth's ellipsoid
-  b = (1 - f) * 6378.135  # semi-minor axis of the Earth's ellipsoid
-
-  # Return the distance
-  return c * b
-
-
-def add_weather_time_features(df, timestamp_col='timestamp'):
-  df['datetime'] = pd.to_datetime(df[timestamp_col], errors='coerce')
-  df['datetime_hour'] = df['datetime'].dt.floor('h')
-  df['hour_of_day'] = df['datetime_hour'].dt.hour
-  df['day_of_year'] = df['datetime_hour'].dt.dayofyear
-  df['hour_of_year'] = ((df['day_of_year'] - 1) * 24) + df['hour_of_day']
-  df.drop(columns=['day_of_year'], inplace=True)
-  return df
-
-
-def add_taxi_time_features(df, col='pickup_datetime'):
-  df[col] = pd.to_datetime(df[col])
-  df['dropoff_datetime'] = pd.to_datetime(df['dropoff_datetime'])
-  df['pickup_hour'] = df[col].dt.hour
-  df['pickup_weekday'] = df[col].dt.dayofweek.map({
-    0: 'Mon', 1: 'Tue', 2: 'Wed', 3: 'Thu', 4: 'Fri', 5: 'Sat', 6: 'Sun'
-  })
-  df['pickup_month'] = df[col].dt.month
-  df['day_of_year'] = df[col].dt.dayofyear
-  df['hour_of_year'] = ((df['day_of_year'] - 1) * 24) + df['pickup_hour']
-  return df.drop(columns=['day_of_year'])
-
-
-def add_taxi_distance_features(df):
-  df['hav_dist_km'] = haversine(df['pickup_latitude'], df['pickup_longitude'],
-                                df['dropoff_latitude'],
-                                df['dropoff_longitude'])
-  return df
-
-
-def add_trip_duration_features(df):
-  df['trip_duration_min'] = df['trip_duration'] / 60
-  df['trip_duration_log'] = np.log1p(df['trip_duration'])
-  return df
-
-
 def add_same_location_flag(df, precision=5):
   df['is_same_location'] = (
                                df['pickup_latitude'].round(precision) == df[
@@ -374,24 +332,3 @@ def add_same_location_flag(df, precision=5):
                              'dropoff_longitude'].round(precision)
                            )
   return df
-
-
-def aggregate_weather_hourly(df):
-  return (
-    df.groupby('datetime_hour')
-    .agg({
-      'temp': 'mean',
-      'windspeed': 'mean',
-      'humidity': 'mean',
-      'precip': 'sum',
-      'pressure': 'mean',
-      'dailyprecip': 'first',
-      'dailysnow': 'first',
-      'fog': 'max',
-      'rain': 'max',
-      'snow': 'max',
-      'conditions': lambda x: x.mode().iloc[0] if not x.mode().empty else
-      x.iloc[0]
-    })
-    .reset_index()
-  )

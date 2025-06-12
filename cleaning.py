@@ -1,29 +1,113 @@
 import pandas as pd
 
 
+def flag_and_clip_windspeed(df: pd.DataFrame, col='windspeed_kph',
+    clip_threshold=80):
+  """
+  Flags and clips extreme windspeed values in the DataFrame.
+
+  Parameters:
+      df (pd.DataFrame): The input DataFrame.
+      col (str): The name of the windspeed column.
+      clip_threshold (float): Maximum allowed windspeed in km/h.
+
+  Returns:
+      pd.DataFrame: DataFrame with new boolean column 'wind_is_outlier' and clipped windspeed.
+  """
+  df = df.copy()
+  df['wind_is_outlier'] = df[col] > clip_threshold
+  df[col] = df[col].clip(upper=clip_threshold)
+  return df
+
+
+def flag_and_clip_precipitation(df: pd.DataFrame, col='precip_mm',
+    clip_threshold_low=0.0, clip_threshold_high=20.0):
+  """
+  Flags and clips extreme precipitation values in the DataFrame.
+
+  Parameters:
+      df (pd.DataFrame): The input DataFrame.
+      col (str): The name of the precipitation column.
+      clip_threshold_low (float): Minimum allowed precipitation in mm.
+      clip_threshold_high (float): Maximum allowed precipitation in mm.
+
+  Returns:
+      pd.DataFrame: DataFrame with new boolean column 'precip_is_outlier' and clipped values.
+  """
+  df = df.copy()
+  df['precip_is_outlier'] = (df[col] < clip_threshold_low) | (
+      df[col] > clip_threshold_high)
+  df[col] = df[col].clip(lower=clip_threshold_low, upper=clip_threshold_high)
+  return df
+
+
+def flag_and_clip_pressure(df: pd.DataFrame, col: str = 'pressure_hPa',
+    clip_threshold_low: float = 980.0,
+    clip_threshold_high: float = 1040.0) -> pd.DataFrame:
+  """
+  Flags and clips extreme pressure values in the DataFrame.
+
+  Parameters:
+      df (pd.DataFrame): The input DataFrame.
+      col (str): The name of the pressure column.
+      clip_threshold_low (float): Minimum allowed pressure in hPa.
+      clip_threshold_high (float): Maximum allowed pressure in hPa.
+
+  Returns:
+      pd.DataFrame: DataFrame with new boolean column 'pressure_is_outlier' and clipped values.
+  """
+  df = df.copy()
+  df['pressure_is_outlier'] = (df[col] < clip_threshold_low) | (
+      df[col] > clip_threshold_high)
+  df[col] = df[col].clip(lower=clip_threshold_low, upper=clip_threshold_high)
+  return df
+
+
+def flag_and_clip_daily_precip(df: pd.DataFrame, col='precip_daily_mm',
+    clip_threshold_low=0.0, clip_threshold_high=80.0):
+  """
+  Flags and clips extreme daily precipitation values in the DataFrame.
+
+  Parameters:
+      df (pd.DataFrame): The input DataFrame.
+      col (str): The name of the daily precipitation column.
+      clip_threshold_low (float): Minimum allowed precipitation in mm.
+      clip_threshold_high (float): Maximum allowed precipitation in mm.
+
+  Returns:
+      pd.DataFrame: DataFrame with new boolean column 'precip_daily_is_outlier' and clipped values.
+  """
+  df = df.copy()
+  df['precip_daily_is_outlier'] = (df[col] < clip_threshold_low) | (
+      df[col] > clip_threshold_high)
+  df[col] = df[col].clip(lower=clip_threshold_low, upper=clip_threshold_high)
+  return df
+
+
+def flag_and_clip_daily_snow(df: pd.DataFrame, col='daily_snow_mm',
+    clip_threshold=50.0):
+  """
+  Flags and clips extreme daily snowfall values in the DataFrame.
+
+  Parameters:
+      df (pd.DataFrame): The input DataFrame.
+      col (str): The name of the daily snow column.
+      clip_threshold (float): Maximum allowed snow depth in mm.
+
+  Returns:
+      pd.DataFrame: DataFrame with new boolean column 'daily_snow_is_outlier' and clipped values.
+  """
+  df = df.copy()
+  df['daily_snow_is_outlier'] = df[col] > clip_threshold
+  df[col] = df[col].clip(upper=clip_threshold)
+  return df
+
+
 def interpolate_time_series(df, cols, index_col='datetime_hour'):
   df = df.copy().set_index(index_col)
   for col in cols:
     df[col] = df[col].interpolate(method='time')
   return df.reset_index()
-
-
-def clean_trace_and_convert(df, cols, trace='T', val=0.001):
-  df = replace_trace_values(df, cols, trace=trace, val=val)
-  df = convert_to_float(df, cols)
-  return df
-
-
-def replace_trace_values(df, cols, trace='T', val=0.001):
-  for col in cols:
-    df[col] = df[col].replace(trace, val)
-  return df
-
-
-def convert_to_float(df, cols):
-  for col in cols:
-    df[col] = pd.to_numeric(df[col], errors='coerce')
-  return df
 
 
 def remove_invalid_passenger_counts(df, valid_range):
