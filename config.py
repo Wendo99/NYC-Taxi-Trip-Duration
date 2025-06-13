@@ -6,6 +6,8 @@ PACKAGE_DIR = "../data_packages"
 WEATHER_DATA_RAW_SAVE = WEATHER_DATA_RAW_DIR + "/weather_data_raw.csv"
 WEATHER_DATA_SAVE = WEATHER_DATA_DIR + "/weather_data.csv"
 
+WEATHER_DATA_PART_2 = '../gitData/weather_data_new_rows.csv'
+
 TAXI_DATA_RAW_DIR = "../data/taxi_data_raw"
 TAXI_DATA_DIR = "../data"
 TAXI_DATA_RAW_SAVE = TAXI_DATA_RAW_DIR + "/taxi_data_raw.csv"

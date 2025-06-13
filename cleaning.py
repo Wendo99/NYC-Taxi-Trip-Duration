@@ -1,23 +1,7 @@
 import pandas as pd
 
 
-def flag_and_clip_windspeed(df: pd.DataFrame, col='windspeed_kph',
-    clip_threshold=80):
-  """
-  Flags and clips extreme windspeed values in the DataFrame.
 
-  Parameters:
-      df (pd.DataFrame): The input DataFrame.
-      col (str): The name of the windspeed column.
-      clip_threshold (float): Maximum allowed windspeed in km/h.
-
-  Returns:
-      pd.DataFrame: DataFrame with new boolean column 'wind_is_outlier' and clipped windspeed.
-  """
-  df = df.copy()
-  df['wind_is_outlier'] = df[col] > clip_threshold
-  df[col] = df[col].clip(upper=clip_threshold)
-  return df
 
 
 def flag_and_clip_precipitation(df: pd.DataFrame, col='precip_mm',
@@ -101,13 +85,6 @@ def flag_and_clip_daily_snow(df: pd.DataFrame, col='daily_snow_mm',
   df['daily_snow_is_outlier'] = df[col] > clip_threshold
   df[col] = df[col].clip(upper=clip_threshold)
   return df
-
-
-def interpolate_time_series(df, cols, index_col='datetime_hour'):
-  df = df.copy().set_index(index_col)
-  for col in cols:
-    df[col] = df[col].interpolate(method='time')
-  return df.reset_index()
 
 
 def remove_invalid_passenger_counts(df, valid_range):
