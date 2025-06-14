@@ -1,10 +1,11 @@
 import pickle
 from pathlib import Path
 from zipfile import ZipFile
-import config as cf
 
 import pandas as pd
 from kaggle.api.kaggle_api_extended import KaggleApi
+
+import features.config as cf
 
 
 def download_kaggle_competition(api, competition_name, path):

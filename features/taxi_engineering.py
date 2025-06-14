@@ -1,16 +1,11 @@
 import numpy as np
-import pandas as pd
 
 from features.distances import haversine
 
 
-def add_taxi_time_features(df, col='pickup_datetime'):
-  df[col] = pd.to_datetime(df[col])
-  df['dropoff_datetime'] = pd.to_datetime(df['dropoff_datetime'])
+def add_taxi_time_features(df, col):
   df['pickup_hour'] = df[col].dt.hour
-  df['pickup_weekday'] = df[col].dt.dayofweek.map({
-    0: 'Mon', 1: 'Tue', 2: 'Wed', 3: 'Thu', 4: 'Fri', 5: 'Sat', 6: 'Sun'
-  })
+  df['pickup_weekday'] = df[col].dt.dayofweek
   df['pickup_month'] = df[col].dt.month
   df['day_of_year'] = df[col].dt.dayofyear
   df['hour_of_year'] = ((df['day_of_year'] - 1) * 24) + df['pickup_hour']

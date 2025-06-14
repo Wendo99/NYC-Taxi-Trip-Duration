@@ -11,9 +11,22 @@ def split_precip_into_rain_and_snow(df):
   return df
 
 
+def classify_weather_data(df):
+  df = df.copy()
+  classify_temp(df)
+  classify_windspeed(df)
+  classify_humidity(df)
+  classify_fog(df)
+  classify_freezing(df)
+  classify_clouds(df)
+  classify_haze(df)
+  classify_pressure(df)
+  classify_rain(df)
+  classify_snow(df)
+  return df
+
+
 # Apply split
-
-
 def classify_temp(df):
   temp_mapping = {
     'unknown': -1,
@@ -138,11 +151,9 @@ def classify_humidity_label(h):
 def classify_precip_label(x):
   if abs(x - 0.0) < 1e-9:
     return 'no_rain'
-  elif x < 0.25:
-    return 'trace_rain'
   elif x < 2.5:
     return 'light_rain'
-  elif x < 10.0:
+  elif 2.5 <= x < 10.0:
     return 'moderate_rain'
   elif x >= 10:
     return 'heavy_rain'
@@ -151,7 +162,7 @@ def classify_precip_label(x):
   return 'unknown'
 
 
-def classify_precip(df):
+def classify_rain(df):
   """
   Classifies and codes hourly precipitation levels.
 
@@ -162,11 +173,10 @@ def classify_precip(df):
   rain_mapping = {
     'unknown': -1,
     'no_rain': 0,
-    'trace_rain': 1,
-    'light_rain': 2,
-    'moderate_rain': 3,
-    'heavy_rain': 4,
-    'very_heavy_rain': 5
+    'light_rain': 1,
+    'moderate_rain': 2,
+    'heavy_rain': 3,
+    'very_heavy_rain': 4
   }
 
   df['rain_class'] = df['rain_mm'].apply(classify_precip_label)
@@ -180,7 +190,7 @@ def classify_snow(df):
     'unknown': -1,
     'no_snow': 0,
     'light_snow': 1,
-    "snow": 2,
+    "moderate_snow": 2,
     'heavy_snow': 3
   }
   df['snow_class'] = df['snow_mm'].apply(
@@ -192,11 +202,11 @@ def classify_snow(df):
 def classify_snow_label(x):
   if abs(x - 0.0) < 1e-9:
     return 'no_snow'
-  elif x < 2.5:
+  elif x < 1.0:
     return 'light_snow'
-  elif x < 10:
-    return "snow"
-  elif x >= 10:
+  elif 1.0 <= x < 5:
+    return "moderate_snow"
+  elif x >= 5:
     return 'heavy_snow'
   else:
     return 'unknown'
@@ -255,7 +265,7 @@ def classify_haze_label(x):
 
 def classify_freezing(df):
   freezing_mapping = {
-    "none": 0,
+    "no_freezing_rain_fog": 0,
     'light_freezing_rain': 1,
     'light_freezing_fog': 2
   }
@@ -271,14 +281,14 @@ def classify_freezing_label(x):
   elif x == "Light Freezing Rain":
     return 'light_freezing_rain'
   else:
-    return 'none'
+    return 'no_freezing_rain_fog'
 
 
 # fog
 
 def classify_fog(df):
   fog_mapping = {
-    "none": -1,
+    "unknown": -1,
     "fog": 1,
     "no_fog": 0
   }
@@ -292,7 +302,7 @@ def classify_fog_label(x):
     return "fog"
   elif x == 0:
     return 'no_fog'
-  return 'none'
+  return 'unknown'
 
 
 def classify_pressure(df):
@@ -337,21 +347,66 @@ def add_same_location_flag(df, precision=5):
 
 
 def aggregate_weather_hourly(df):
+  """
+  Aggregates weather observations to hourly level.
+
+  - Averages continuous variables
+  - Uses 'first' or 'max' for daily totals
+  - Uses 'max' for binary or flag columns
+  - Applies mode for categorical 'conditions'
+
+  Parameters:
+      df (pd.DataFrame): Weather data with datetime_hour column
+
+  Returns:
+      pd.DataFrame: Hourly aggregated weather data
+  """
   return (
-    df.groupby('datetime_hour')
-    .agg({
+    df.groupby('datetime_hour').agg({
       'temp_c': 'mean',
       'windspeed_kph': 'mean',
+      'windspeed_outliers': 'max',
       'humidity': 'mean',
-      'precip+mm': 'sum',
-      'pressure': 'mean',
-      'dailyprecip': 'first',
-      'dailysnow': 'first',
+      'pressure_hpa': 'mean',
+      'daily_precip_mm': 'first',
+      'daily_snow_mm': 'first',
+      'daily_snow_outliers': 'max',
+      'rain_mm': 'mean',
+      'snow_mm': 'mean',
+      'windspeed_kph_sqrt': 'mean',
       'fog': 'max',
       'rain': 'max',
       'snow': 'max',
+      'cloud_missing_flag': 'max',
       'conditions': lambda x: x.mode().iloc[0] if not x.mode().empty else
       x.iloc[0]
     })
     .reset_index()
   )
+
+
+def fix_unknown_cloud_classes(df):
+  """
+  Flags and optionally corrects unknown values in 'cloud_class'.
+  If 'conditions' indicate Rain or Snow, unknown is set to 'overcast'.
+
+  Parameters:
+      df (pd.DataFrame): Weather DataFrame with 'cloud_class' and 'conditions'
+
+  Returns:
+      pd.DataFrame: Modified DataFrame with 'cloud_missing_flag' and corrected 'cloud_class'
+  """
+  df = df.copy()
+
+  # Flag for originally missing cloud classification
+  df['cloud_missing_flag'] = df['cloud_class'].eq('unknown').astype(int)
+
+  # Optional reclassification
+  def fix_class(row):
+    if row['cloud_class'] == 'unknown':
+      if 'Rain' in row['conditions'] or 'Snow' in row['conditions']:
+        return 'overcast'
+    return row['cloud_class']
+
+  df['cloud_class'] = df.apply(fix_class, axis=1)
+  return df
