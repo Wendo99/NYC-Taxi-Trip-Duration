@@ -1,4 +1,4 @@
-from features.taxi_config import NYC_LAT_MIN, NYC_LAT_MAX, NYC_LON_MIN, \
+from preModelling.data_config import NYC_LAT_MIN, NYC_LAT_MAX, NYC_LON_MIN, \
   NYC_LON_MAX
 
 

@@ -5,7 +5,7 @@ from zipfile import ZipFile
 import pandas as pd
 from kaggle.api.kaggle_api_extended import KaggleApi
 
-import features.config as cf
+import preModelling.data_config as cf
 
 
 def download_kaggle_competition(api, competition_name, path):

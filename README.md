@@ -1,5 +1,7 @@
 # New York City Taxi Trip Duration – Project
 
+Analysiere modelling_config.py auf Fehler und Unstimmigkeiten.
+
 - Framing the Problem
     - Goal: Based on individual trip attributes, our goal is to build and
       train a model that predicts the total ride duration of taxi trips in New
