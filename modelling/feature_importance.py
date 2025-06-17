@@ -27,8 +27,10 @@ def plot_lin_feature_importance(pipeline, X_train, y_train,
     raise AttributeError(
         f"Model step '{model_step}' does not provide valid 'coef_' attribute.")
   coefs = model.coef_
-  if coefs.ndim > 1:
+  if coefs.ndim > 1 and coefs.shape[0] == 1:
     coefs = coefs[0]
+  elif coefs.ndim > 1:
+    raise ValueError("Multi-output regression not supported.")
 
   feature_names = pipeline.named_steps[pre_step].get_feature_names_out()
 
@@ -38,11 +40,7 @@ def plot_lin_feature_importance(pipeline, X_train, y_train,
     'sign': np.sign(coefs)
   }).sort_values(by='importance', ascending=False)
 
-  plt.figure(figsize=(10, 6))
-  sns.barplot(x='importance', y='feature', data=feat_df.head(20))
-  plt.title("Top 20 feature coefficients (absolute)")
-  plt.tight_layout()
-  plt.show()
+  _plot_feature_bar(feat_df, 20, "Top 20 feature importances")
   return feat_df
 
 
@@ -78,9 +76,13 @@ def plot_tree_feature_importance(pipeline, X_train, y_train,
     'importance': importances
   }).sort_values(by='importance', ascending=False)
 
+  _plot_feature_bar(feat_df, 20, "Top 20 feature importances")
+  return feat_df
+
+
+def _plot_feature_bar(feat_df, top_n, title):
   plt.figure(figsize=(10, 6))
-  sns.barplot(x='importance', y='feature', data=feat_df.head(20))
-  plt.title(f"Top {top_n} feature importances")
+  sns.barplot(x='importance', y='feature', data=feat_df.head(top_n))
+  plt.title(title)
   plt.tight_layout()
   plt.show()
-  return feat_df

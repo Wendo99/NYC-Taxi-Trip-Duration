@@ -1,13 +1,17 @@
 import pandas as pd
 from IPython.core.display_functions import display
 from sklearn.cluster import MiniBatchKMeans
+from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import Ridge, Lasso, LinearRegression
 from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from modelling.modelling_config import CV_FOLDS, RIDGE_ALPHA, RANDOM_SEED, \
-  LASSO_ALPHA, MAX_ITER
+  LASSO_ALPHA, MAX_ITER, N_PICKUP_CLUSTERS, KMEANS_BATCH_SIZE, \
+  N_DROPOFF_CLUSTERS
+
+LOG_RMSE_MEAN_ = 'log-RMSE (mean)'
 
 
 # --- Pipelines
@@ -19,7 +23,7 @@ def make_linear_pipeline(model_type='linreg', preprocessing=None):
                   max_iter=MAX_ITER)
   else:
     model = LinearRegression()
-  return Pipeline([('pre', preprocessing), ('model', model)])
+  return Pipeline([('pre', preprocessing), ('model', model)], memory=None)
 
 
 def cat_base_pipelining():
@@ -50,11 +54,11 @@ def get_display_models_results(models, x_train, y_train, cv_folds=CV_FOLDS):
     rmse_scores = -scores
     results.append({
       "Model": name,
-      "log-RMSE (mean)": rmse_scores.mean(),
+      LOG_RMSE_MEAN_: rmse_scores.mean(),
       "log-RMSE (std)": rmse_scores.std()
     })
 
-  results_df = pd.DataFrame(results).sort_values("log-RMSE (mean)")
+  results_df = pd.DataFrame(results).sort_values(LOG_RMSE_MEAN_)
   display(results_df)
   return results_df
 
@@ -63,12 +67,12 @@ def compare_models_results(results, seconds=False):
   import matplotlib.pyplot as plt
   import numpy as np
 
-  if seconds and 'log-RMSE (mean)' in results.columns:
+  if seconds and LOG_RMSE_MEAN_ in results.columns:
     results = results.copy()
-    results["RMSE (sec)"] = np.expm1(results["log-RMSE (mean)"]).round(3)
+    results["RMSE (sec)"] = np.expm1(results[LOG_RMSE_MEAN_]).round(3)
 
-  results = results.sort_values("log-RMSE (mean)")
-  results.plot(x="Model", y="log-RMSE (mean)", kind="barh", legend=False,
+  results = results.sort_values(LOG_RMSE_MEAN_)
+  results.plot(x="Model", y=LOG_RMSE_MEAN_, kind="barh", legend=False,
                figsize=(8, 4))
   plt.xlabel("log-RMSE (lower is better)")
   plt.title("Model Performance")
@@ -78,44 +82,24 @@ def compare_models_results(results, seconds=False):
   if seconds:
     display(results)
 
-  # --- Model evaluation
-  # def get_display_models_results(models, x_train, y_train, cv_folds=CV_FOLDS):
-  #   results = []
-  #
-  #   for name, model in models.items():
-  #     scores = cross_val_score(model, x_train, y_train,
-  #                              scoring="neg_root_mean_squared_error", cv=cv_folds)
-  #     rmse_scores = -scores
-  #     results.append({
-  #       "Model": name,
-  #       "log-RMSE (mean)": rmse_scores.mean(),
-  #       "log-RMSE (std)": rmse_scores.std()
-  #     })
-  #
-  #   results_df = pd.DataFrame(results).sort_values(by="log-RMSE (mean)")
-  #
-  #   display(results_df)
-  #
-  #   return results_df
 
-  # def convert_logrmse_to_seconds(results_df):
-  #   """
-  #   Converts log-RMSE values to approximate RMSE in seconds.
-  #     Parameters:
-  #         results_df (pd.DataFrame): DataFrame with 'log-RMSE (mean)' column.
-  #     Returns:
-  #         pd.DataFrame: DataFrame with additional 'RMSE (sec, approx)' column.
-  #     """
-  #   df = results_df.copy()
-  #   df["RMSE (sec, approx)"] = np.expm1(df["log-RMSE (mean)"])
-  #   df["RMSE (sec, approx)"] = df["RMSE (sec, approx)"].round(2)
-  #   display(df)
-  #   return df
-  #
-  #
-  # def compare_models_results(models_results):
-  #   sns.barplot(x="log-RMSE (mean)", y="Model", data=models_results)
-  #   plt.title("Model comparison based on log-RMSE")
-  #   plt.xlabel("log-RMSE (error measure)")
-  #   plt.tight_layout()
-  #   plt.show()
+# Feature selection utility
+def select_features(df: pd.DataFrame, feature_groups: dict) -> pd.DataFrame:
+  """Returns a DataFrame with only the selected features."""
+  cols = sum(feature_groups.values(), [])  # flatten all feature lists
+  return df[cols]
+
+
+# Preprocessing pipeline builder
+def make_preprocessing_pipeline(feature_groups: dict) -> ColumnTransformer:
+  return ColumnTransformer([
+    ('num', num_base_pipelining(), feature_groups.get('num', [])),
+    ('cat', cat_base_pipelining(), feature_groups.get('cat', [])),
+    ('geo_pick',
+     geo_base_pipelining(N_PICKUP_CLUSTERS, RANDOM_SEED, KMEANS_BATCH_SIZE),
+     feature_groups.get('geo_pick', [])),
+    ('geo_drop',
+     geo_base_pipelining(N_DROPOFF_CLUSTERS, RANDOM_SEED, KMEANS_BATCH_SIZE),
+     feature_groups.get('geo_drop', [])),
+    ('bool', bool_base_pipelining(), feature_groups.get('bool', [])),
+  ])
