@@ -5,7 +5,8 @@ from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import Ridge, Lasso, LinearRegression
 from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import make_pipeline, Pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, OrdinalEncoder, \
+  FunctionTransformer
 
 from modelling.modelling_config import CV_FOLDS, RIDGE_ALPHA, RANDOM_SEED, \
   LASSO_ALPHA, MAX_ITER, N_PICKUP_CLUSTERS, KMEANS_BATCH_SIZE, \
@@ -27,7 +28,10 @@ def make_linear_pipeline(model_type='linreg', preprocessing=None):
 
 
 def cat_base_pipelining():
-  return 'passthrough'
+  return Pipeline([
+    ('encoder',
+     OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1))
+  ], memory=None)
 
 
 def num_base_pipelining():
@@ -36,12 +40,24 @@ def num_base_pipelining():
 
 
 def bool_base_pipelining():
-  return 'passthrough'
+  return make_pipeline(FunctionTransformer(), memory=None)
 
 
 def geo_base_pipelining(n_clusters, random_state, batch_size):
   return make_pipeline(MiniBatchKMeans(n_clusters, random_state=random_state,
                                        batch_size=batch_size), memory=None)
+
+
+def create_geo_clusters(df, feature_cols, prefix, n_clusters, random_state,
+    batch_size):
+  coords = df[feature_cols]
+  kmeans = MiniBatchKMeans(n_clusters=n_clusters,
+                           random_state=random_state,
+                           batch_size=batch_size)
+  cluster_labels = kmeans.fit_predict(coords)
+  df[f'{prefix}_cluster'] = pd.Series(cluster_labels, index=df.index).astype(
+    'category')
+  return df
 
 
 def get_display_models_results(models, x_train, y_train, cv_folds=CV_FOLDS):
@@ -59,7 +75,6 @@ def get_display_models_results(models, x_train, y_train, cv_folds=CV_FOLDS):
     })
 
   results_df = pd.DataFrame(results).sort_values(LOG_RMSE_MEAN_)
-  display(results_df)
   return results_df
 
 

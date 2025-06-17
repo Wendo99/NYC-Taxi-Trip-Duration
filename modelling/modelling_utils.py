@@ -14,7 +14,8 @@ from modelling.transformer import make_linear_pipeline
 
 def feature_to_category(df, features):
   for col in features:
-    df[col] = df[col].astype('category')
+    if col in df.columns:
+      df[col] = df[col].astype('category')
   return df
 
 

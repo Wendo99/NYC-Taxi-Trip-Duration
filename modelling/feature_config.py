@@ -11,11 +11,8 @@ CAT_ALL = ['pickup_weekday', 'pickup_month', 'vendor_id',
            'freezing_code',
            'cloud_code',
            'hazy_code',
-           'pressure_code', 'rain_code', 'snow_code']
-
-GEO_PICK = ['pickup_longitude', 'pickup_latitude']
-
-GEO_DROP = ['dropoff_longitude', 'dropoff_latitude']
+           'pressure_code', 'rain_code', 'snow_code',
+           'pickup_cluster', 'dropoff_cluster']
 
 BOOL_ALL = [
   'store_and_fwd_flag_bin', 'fog', 'rain', 'snow', 'cloud_missing_flag',
@@ -28,7 +25,8 @@ NUM_NO_WEATHER = ['passenger_count', 'hav_dist_km_log']
 CAT_NO_WEATHER = ['pickup_weekday', 'pickup_month', 'vendor_id',
                   'pickup_hour',
                   'hour_of_year',
-                  'hour_of_day', 'temp_code']
+                  'hour_of_day', 'temp_code','pickup_cluster',
+                  'dropoff_cluster']
 
 BOOL_NO_WEATHER = [
   'store_and_fwd_flag_bin', 'passenger_count_invalid',
@@ -38,15 +36,11 @@ BOOL_NO_WEATHER = [
 FEATURE_GROUPS_ALL = {
   'num': NUM_ALL,
   'cat': CAT_ALL,
-  'geo_pick': GEO_PICK,
-  'geo_drop': GEO_DROP,
   'bool': BOOL_ALL
 }
 
 FEATURE_GROUPS_NO_WEATHER = {
   'num': NUM_NO_WEATHER,
   'cat': CAT_NO_WEATHER,
-  'geo_pick': GEO_PICK,
-  'geo_drop': GEO_DROP,
   'bool': BOOL_NO_WEATHER
 }
