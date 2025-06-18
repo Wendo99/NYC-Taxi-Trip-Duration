@@ -1,4 +1,21 @@
 import numpy as np
+import pandas as pd
+from pandas.tseries.holiday import USFederalHolidayCalendar
+
+
+def add_us_holiday_flag(df, datetime_col='pickup_datetime',
+    flag_col='is_holiday'):
+  """
+  Add a boolean column that is True on US federal holidays.
+  """
+  df['pickup_datetime'] = pd.to_datetime(df['pickup_datetime'])
+  cal = USFederalHolidayCalendar()
+  holidays = cal.holidays(
+      start=df[datetime_col].min().normalize(),
+      end=df[datetime_col].max().normalize()
+  )
+  df[flag_col] = df[datetime_col].dt.normalize().isin(holidays)
+  return df
 
 
 def add_taxi_time_features(df, col):

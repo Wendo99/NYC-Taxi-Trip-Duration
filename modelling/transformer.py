@@ -1,15 +1,15 @@
 import pandas as pd
 from IPython.core.display_functions import display
+# sklearn
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import Ridge, Lasso, LinearRegression
 from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import make_pipeline, Pipeline
-from sklearn.preprocessing import StandardScaler, OrdinalEncoder, \
-  FunctionTransformer
+from sklearn.preprocessing import StandardScaler, OrdinalEncoder
 
 from modelling.modelling_config import CV_FOLDS, RIDGE_ALPHA, RANDOM_SEED, \
-  LASSO_ALPHA, MAX_ITER, N_PICKUP_CLUSTERS, KMEANS_BATCH_SIZE, \
+  LASSO_ALPHA, N_PICKUP_CLUSTERS, KMEANS_BATCH_SIZE, \
   N_DROPOFF_CLUSTERS
 
 LOG_RMSE_MEAN_ = 'log-RMSE (mean)'
@@ -21,7 +21,7 @@ def make_linear_pipeline(model_type='linreg', preprocessing=None):
     model = Ridge(alpha=RIDGE_ALPHA, random_state=RANDOM_SEED)
   elif model_type == 'lasso':
     model = Lasso(alpha=LASSO_ALPHA, random_state=RANDOM_SEED,
-                  max_iter=MAX_ITER)
+                  )
   else:
     model = LinearRegression()
   return Pipeline([('pre', preprocessing), ('model', model)], memory=None)
@@ -56,7 +56,7 @@ def create_geo_clusters(df, feature_cols, prefix, n_clusters, random_state,
                            batch_size=batch_size)
   cluster_labels = kmeans.fit_predict(coords)
   df[f'{prefix}_cluster'] = pd.Series(cluster_labels, index=df.index).astype(
-    'category')
+      'category')
   return df
 
 
@@ -118,3 +118,41 @@ def make_preprocessing_pipeline(feature_groups: dict) -> ColumnTransformer:
      feature_groups.get('geo_drop', [])),
     ('bool', bool_base_pipelining(), feature_groups.get('bool', [])),
   ])
+
+
+import numpy as np
+from sklearn.preprocessing import FunctionTransformer
+
+EARTH_RADIUS_KM = 6371.0088
+
+
+def _haversine_array(x):
+  # ensure numpy array and use only the first 4 columns in the expected order
+  x = np.asarray(x, dtype=float)[:, :4]
+
+  lat1, lon1, lat2, lon2 = np.radians(x.T)
+  dlat = lat2 - lat1
+  dlon = lon2 - lon1
+
+  a = np.sin(dlat / 2.0) ** 2 + \
+      np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2.0) ** 2
+  c = 2 * np.arcsin(np.sqrt(a))
+  km = EARTH_RADIUS_KM * c
+  return km.reshape(-1, 1)
+
+
+def _haversine_feature_names(_=None) -> list[str]:
+  """Return a single output name so ColumnTransformer can introspect."""
+  return ["hav_dist_km"]
+
+
+def build_haversine_transformer() -> FunctionTransformer:
+  """
+  Picklable transformer that adds 'hav_dist_km' (great-circle distance).
+  """
+  return FunctionTransformer(
+      func=_haversine_array,
+      feature_names_out=_haversine_feature_names,
+      validate=False,
+      check_inverse=False,
+  )

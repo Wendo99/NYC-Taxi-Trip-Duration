@@ -51,7 +51,6 @@ def flag_geographic_outliers(df):
       (df['pickup_longitude'].round(5) == df['dropoff_longitude'].round(5)) &
       (df['trip_duration'] > 300)
   )
-
   return df
 
 

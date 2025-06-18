@@ -365,12 +365,10 @@ def aggregate_weather_hourly(df):
     df.groupby('datetime_hour').agg({
       'temp_c': 'mean',
       'windspeed_kph': 'mean',
-      'windspeed_outliers': 'max',
       'humidity': 'mean',
       'pressure_hpa': 'mean',
       'daily_precip_mm': 'first',
       'daily_snow_mm': 'first',
-      'daily_snow_outliers': 'max',
       'rain_mm': 'mean',
       'snow_mm': 'mean',
       'windspeed_kph_sqrt': 'mean',
