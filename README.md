@@ -1,7 +1,5 @@
 # New York City Taxi Trip Duration – Project
 
-Analysiere modelling_config.py auf Fehler und Unstimmigkeiten.
-
 - Framing the Problem
     - Goal: Based on individual trip attributes, our goal is to build and
       train a model that predicts the total ride duration of taxi trips in New
@@ -13,6 +11,23 @@ Analysiere modelling_config.py auf Fehler und Unstimmigkeiten.
     the existing characteristics?
   - Can the forecast quality be improved by integrating weather data (temperature, humidity, wind
     speed, precipitation)?
+    
+### Project Structure Overview
+
+- `/data/`
+    - `/data/*` – Will contain downloaded or saved data files. 
+- `/src/`
+    - `/src/constants/*` – Constants – e.g. Strings, Parameters etc.
+    - `/src/features/*` – Functions for Pre-Training – e.g. calculating the haversine distance, feature engineering of taxi and weather data and utilities
+    - `/src/pipeline/*` – Functions for Pre-Training DataSet-Pipelines and Modell-Training
+- `/notebooks/
+    - `/notebooks/*` – Contains alle Jupyter Notebooks used in EDA-/Engineering/Merge- and Modelling-Phase
+        1. Taxi
+        2. Weather
+        3. Merge
+        4. Modelling
+     
+***
 
 ### Data Description – New York City Taxi Trip Duration
 
