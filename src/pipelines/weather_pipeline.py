@@ -6,11 +6,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from constants import core_c as c, weather_c
-from constants import weather_c as w
+import constants.path_file_constants
+from constants import weather_constants as w
 from data_io import load_weather_data
-from src.features import utils as feat_utils
-from src.features import weather as feat_weather
+from src.utilities import shared_utilities as feat_utils
+from src.utilities import weather_utilities as feat_weather
 
 log = logging.getLogger(__name__)
 
@@ -34,8 +34,8 @@ def build_weather_dataset(
   load_weather_data()
 
   # 1a. Read both raw CSVs   ----------
-  csv1 = pd.read_csv(Path(weather_c.WEATHER_RAW_CSV1))
-  csv2 = pd.read_csv(Path(weather_c.WEATHER_RAW_CSV2))
+  csv1 = pd.read_csv(Path(constants.path_file_constants.WEATHER_RAW_CSV1))
+  csv2 = pd.read_csv(Path(constants.path_file_constants.WEATHER_RAW_CSV2))
   df = pd.concat([csv1, csv2], ignore_index=True)
 
   df["datetime"] = pd.to_datetime(df["timestamp"], errors="coerce")
@@ -56,21 +56,16 @@ def build_weather_dataset(
   df["pressure_hpa"] = df["pressure_hpa"].interpolate(method="time")
   df = df.reset_index()  # brings 'datetime' back as a column
 
+  outlier = (("windspeed_kph",
+              "windspeed_outliers",
+              w.WindLimits.kph_min,
+              w.WindLimits.kph_max), ("daily_snow_mm",
+                                      "daily_snow_outliers",
+                                      w.DailySnowLimit.mm_min,
+                                      w.DailySnowLimit.mm_max))
+
   # 5. Flag + clip outliers   ----------
-  df = feat_utils.flag_and_clip(
-      df,
-      col="windspeed_kph",
-      flag_name="windspeed_outliers",
-      lower=w.WindLimits.kph_min,
-      upper=w.WindLimits.kph_max,
-  )
-  df = feat_utils.flag_and_clip(
-      df,
-      col="daily_snow_mm",
-      flag_name="daily_snow_outliers",
-      lower=w.DailySnowLimit.mm_min,
-      upper=w.DailySnowLimit.mm_max,
-  )
+  df = feat_utils.flag_and_clip(df, outlier)
 
   # 6. Feature engineering   ----------
   df = feat_weather.add_time_features(df, "datetime")
@@ -84,7 +79,7 @@ def build_weather_dataset(
     df = df.rename(columns={"datetime_hour": "datetime"})
   df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
 
-  # recompute time‐based features
+  # recompute time‐based utilities
   df = feat_weather.add_time_features(df, datetime_col="datetime")
 
   # 8. Ordinal classifications   ----------
@@ -101,21 +96,14 @@ def build_weather_dataset(
 
   # 9. Persist if requested
   if save_csv:
-    Path(c.PROCESSED_DIR).mkdir(parents=True, exist_ok=True)
-    df.to_csv(w.WEATHER_PROCESSED_CSV, index=False)
+    Path(constants.path_file_constants.PROCESSED_DIR).mkdir(parents=True,
+                                                            exist_ok=True)
+    df.to_csv(constants.path_file_constants.WEATHER_PROCESSED_CSV, index=False)
     if verbose:
-      log.info("Written              : %s", w.WEATHER_PROCESSED_CSV)
+      log.info("Written              : %s",
+               constants.path_file_constants.WEATHER_PROCESSED_CSV)
 
   if verbose:
     log.info("Final shape          : %s", df.shape)
 
   return df
-#
-#
-# # Run ad-hoc ---------------------------------------------------------------
-# if __name__ == "__main__":
-#   logging.basicConfig(
-#       level=logging.INFO,
-#       format="%(asctime)s  %(levelname)-8s  %(message)s",
-#   )
-#   build_weather_dataset(save_csv=True, verbose=True)

@@ -6,7 +6,7 @@ from sklearn.preprocessing import OrdinalEncoder, \
   OneHotEncoder
 from sklearn.preprocessing import StandardScaler
 
-from constants.features_c import NUM_ALL, CAT_ALL, GEO_PICK, \
+from constants.features_constants import NUM_ALL, CAT_ALL, GEO_PICK, \
   GEO_DROP
 
 

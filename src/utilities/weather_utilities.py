@@ -1,18 +1,27 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import Any, Sequence
+import numpy as np
 import pandas as pd
 
-from constants.weather_c import (
-  TEMP_SCALE,
-  WIND_SCALE,
-  HUMIDITY_SCALE,
-  PRESSURE_SCALE,
-  RAIN_SCALE,
-  SNOW_SCALE,
-  CLOUD_MAP, HAZE_MAP, FREEZING_MAP, FOG_MAP, INCH_TO_MM, MPH_TO_KPH,
-  INHG_TO_HPA
-)
-from features.utils import classify_ordinal
+
+@dataclass(frozen=True)
+class OrdinalScale:
+  """Simple container for thresholds + labels (low . high)."""
+
+  thresholds: Sequence[float]
+  labels: Sequence[str]
+
+  def label(self, value: float | int | None) -> str:
+    """Return text label for a single numeric value."""
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+      # NaN or missing value
+      return "unknown"
+    for thr, lab in zip(self.thresholds, self.labels):
+      if value <= thr:
+        return lab
+    return self.labels[-1]
 
 
 def fahrenheit_to_celsius(df, col, new_col):
@@ -21,17 +30,20 @@ def fahrenheit_to_celsius(df, col, new_col):
 
 
 def miles_to_kilometers(df, col, new_col):
-  df[new_col] = df[col] * MPH_TO_KPH
+  import constants.weather_constants as weather_constants
+  df[new_col] = df[col] * weather_constants.MPH_TO_KPH
   return df
 
 
 def inch_to_millimeters(df, col, new_col):
-  df[new_col] = df[col] * INCH_TO_MM
+  import constants.weather_constants as weather_constants
+  df[new_col] = df[col] * weather_constants.INCH_TO_MM
   return df
 
 
 def inch_mercury_to_hpa(df, col, new_col):
-  df[new_col] = df[col] * INHG_TO_HPA
+  import constants.weather_constants as weather_constants
+  df[new_col] = df[col] * weather_constants.IN_TO_HPA
   return df
 
 
@@ -81,27 +93,36 @@ def classify_and_code(
 
 
 def classify_temp(df: pd.DataFrame) -> None:
-  classify_and_code(df, "temp_c", TEMP_SCALE, "temp")
+  import constants.weather_constants as weather_constants
+  classify_and_code(df, "temp_c", weather_constants.TEMP_SCALE, "temp")
 
 
 def classify_windspeed(df: pd.DataFrame) -> None:
-  classify_and_code(df, "windspeed_kph", WIND_SCALE, "windspeed")
+  import constants.weather_constants as weather_constants
+  classify_and_code(df, "windspeed_kph", weather_constants.WIND_SCALE,
+                    "windspeed")
 
 
 def classify_humidity(df: pd.DataFrame) -> None:
-  classify_and_code(df, "humidity", HUMIDITY_SCALE, "humidity")
+  import constants.weather_constants as weather_constants
+  classify_and_code(df, "humidity", weather_constants.HUMIDITY_SCALE,
+                    "humidity")
 
 
 def classify_pressure(df: pd.DataFrame) -> None:
-  classify_and_code(df, "pressure_hpa", PRESSURE_SCALE, "pressure")
+  import constants.weather_constants as weather_constants
+  classify_and_code(df, "pressure_hpa", weather_constants.PRESSURE_SCALE,
+                    "pressure")
 
 
 def classify_rain(df: pd.DataFrame) -> None:
-  classify_and_code(df, "rain_mm", RAIN_SCALE, "rain")
+  import constants.weather_constants as weather_constants
+  classify_and_code(df, "rain_mm", weather_constants.RAIN_SCALE, "rain")
 
 
 def classify_snow(df: pd.DataFrame) -> None:
-  classify_and_code(df, "snow_mm", SNOW_SCALE, "snow")
+  import constants.weather_constants as weather_constants
+  classify_and_code(df, "snow_mm", weather_constants.SNOW_SCALE, "snow")
 
 
 COND_TO_CLOUD = {
@@ -119,29 +140,33 @@ COND_TO_FREEZING = {
 
 
 def classify_clouds(df):
+  import constants.weather_constants as weather_constants
   df["cloud_class"] = (
     df["conditions"].map(COND_TO_CLOUD).fillna("unknown")
   )
-  df["cloud_code"] = df["cloud_class"].map(CLOUD_MAP)
+  df["cloud_code"] = df["cloud_class"].map(weather_constants.CLOUD_MAP)
 
 
 def classify_haze(df):
+  import constants.weather_constants as weather_constants
   df["hazy_class"] = (
     df["conditions"].map(COND_TO_HAZE).fillna("no_haze")
   )
-  df["hazy_code"] = df["hazy_class"].map(HAZE_MAP)
+  df["hazy_code"] = df["hazy_class"].map(weather_constants.HAZE_MAP)
 
 
 def classify_freezing(df):
+  import constants.weather_constants as weather_constants
   df["freezing_class"] = (
     df["conditions"].map(COND_TO_FREEZING).fillna("no_freezing_rain_fog")
   )
-  df["freezing_code"] = df["freezing_class"].map(FREEZING_MAP)
+  df["freezing_code"] = df["freezing_class"].map(weather_constants.FREEZING_MAP)
 
 
 def classify_fog(df):
+  import constants.weather_constants as weather_constants
   df["fog_class"] = df["fog"].apply(lambda x: "fog" if x == 1 else "no_fog")
-  df["fog_code"] = df["fog_class"].map(FOG_MAP)
+  df["fog_code"] = df["fog_class"].map(weather_constants.FOG_MAP)
 
 
 def classify_weather_data(df):
@@ -257,7 +282,7 @@ def add_time_features(df, datetime_col):
 
 def _add_time_features_from_hour(df: pd.DataFrame) -> pd.DataFrame:
   """
-  Adds time-based features derived from 'datetime_hour':
+  Adds time-based utilities derived from 'datetime_hour':
   - hour_of_day: hour [0–23]
   - hour_of_year: absolute hour count since year start
 
@@ -265,7 +290,7 @@ def _add_time_features_from_hour(df: pd.DataFrame) -> pd.DataFrame:
       df (pd.DataFrame): DataFrame with 'datetime_hour' column
 
   Returns:
-      pd.DataFrame: DataFrame with new time features
+      pd.DataFrame: DataFrame with new time utilities
   """
   df = df.copy()
   df['hour_of_day'] = df['datetime_hour'].dt.hour
@@ -277,7 +302,7 @@ def _add_time_features_from_hour(df: pd.DataFrame) -> pd.DataFrame:
 
 def add_weather_interactions(df: pd.DataFrame) -> pd.DataFrame:
   """
-  Create interaction features between rainfall/snowfall and time/weekend flags.
+  Create interaction utilities between rainfall/snowfall and time/weekend flags.
 
   - rain_rush_am:   rain_mm × is_rush_am
   - rain_rush_pm:   rain_mm × is_rush_pm
@@ -288,3 +313,21 @@ def add_weather_interactions(df: pd.DataFrame) -> pd.DataFrame:
   df["rain_rush_pm"] = df["rain_mm"] * df["is_rush_pm"]
   df["snow_weekend"] = df["snow_mm"] * df["is_weekend"]
   return df
+
+
+def classify_ordinal(series, scale: OrdinalScale) -> Any:
+
+
+
+  to_labels = np.vectorize(scale.label, otypes=[object])
+  return to_labels(series)
+
+
+def make_map(labels: Sequence[str], *, unknown_code: int | None = None,
+    start: int = 0) -> dict[str, int]:
+  """Return mapping ``label -> ordinal_code`` (plus optional 'unknown' key)."""
+  mapping: dict[str, int] = {lbl: i for i, lbl in
+                             enumerate(labels, start=start)}
+  if unknown_code is not None:
+    mapping["unknown"] = unknown_code
+  return mapping

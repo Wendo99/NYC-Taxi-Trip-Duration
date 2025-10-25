@@ -3,20 +3,28 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
-from constants.core_c import ZIP_DIR, RAW_DIR, CACHE_DIR, PROCESSED_DIR
+# String Const. ----------------------------------------------------------------
+TIME_REF_COL = "pickup_datetime"
 
-# File locations ------------------------------------------------------------
-TAXI_RAW_ZIP = ZIP_DIR / 'nyc-taxi-trip-duration.zip'
-TAXI_RAW_CSV = RAW_DIR / "train.csv"
-TAXI_CACHE_PICKLE = CACHE_DIR / "taxi_cache.pkl"
-TAXI_PROCESSED_CSV = PROCESSED_DIR / "taxi_clean.csv"
+PICKUP_COORDS = ['pickup_latitude',
+                 'pickup_longitude']
+DROPOFF_COORDS = ['dropoff_latitude', 'dropoff_longitude']
 
-RAW_TIME_COL = "pickup_datetime"
+# Mini-Batch K-Means Cluster ---------------------------------------------------
+ENABLE_MB = True
+N_PICKUP_CLUSTERS = 5
+N_DROPOFF_CLUSTERS = 12
+CLUSTER_BATCH_SIZE = 100_000
+
+# HDBC Cluster ---------------------------------------------------
+ENABLE_HDBC = False
+PICKUP_MIN_CLUSTER_SIZE = 10
+PICKUP_MIN_SAMPLES = 2
+DROPOFF_MIN_CLUSTER_SIZE = 10,
+DROPOFF_MIN_SAMPLES = 2,
 
 
 # ------------------------------------------------------------
-
-
 @dataclass(frozen=True)
 class PassengerLimits:
   min_passengers: int = 1
@@ -39,10 +47,3 @@ class GeoBounds:
     "pickup_longitude", "pickup_latitude",
     "dropoff_longitude", "dropoff_latitude",
   ]
-
-
-# ------------------------------------------------------------
-
-n_pickup_clusters = 5
-n_dropoff_clusters = 8
-batch_size = 10_000

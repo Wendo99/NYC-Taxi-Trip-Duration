@@ -2,20 +2,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
-import constants.taxi_c as taxi_constants
-from constants.modelling_c import RANDOM_STATE
-from constants.taxi_c import (PassengerLimits as pl, GeoBounds as gb,
-                              RAW_TIME_COL,
-                              TAXI_PROCESSED_CSV, n_pickup_clusters, batch_size,
-                              n_dropoff_clusters)
-from data_io import load_taxi_data
-from features.taxi import create_geo_clusters, create_route_distance, \
-  get_jfk_flag, get_lgua
-from src.features import taxi as feat_taxi
-from src.features import utils as feat_utils
+import constants.modell_constants as modelling_constants
+import constants.path_file_constants
+import constants.taxi_constants as taxi_constants
+import data_io
+import utilities.cluster_utilities as cluster_utilities
+import utilities.distance_utilities as distance_utilities
+import utilities.shared_utilities as shared_utilities
+import utilities.taxi_utilities as taxi_utilities
 
 
 def build_taxi_dataset(save_csv: bool = False) -> pd.DataFrame:
@@ -33,7 +29,7 @@ def build_taxi_dataset(save_csv: bool = False) -> pd.DataFrame:
   -------
   pandas.DataFrame
       A copy of the raw taxi data after basic cleaning, outlier flagging,
-      feature engineering (time‑features, Haversine distance, holiday flag,
+      feature engineering (time‑utilities, Haversine distance, holiday flag,
       etc.) and ready for modelling.
 
   Notes
@@ -46,9 +42,10 @@ def build_taxi_dataset(save_csv: bool = False) -> pd.DataFrame:
 
   # 1 Raw Ingest  ----------------------------------------
 
-  df = load_taxi_data()
+  df = data_io.load_taxi_data()
 
-  # 2 ─ Timestamps  ----------------------------------------
+  # 2 convert datetime obj to datetime dtype ----------------------------------
+
   df['pickup_datetime'] = pd.to_datetime(df['pickup_datetime'], errors="coerce"
                                          )
   df['dropoff_datetime'] = pd.to_datetime(df['dropoff_datetime'],
@@ -57,46 +54,66 @@ def build_taxi_dataset(save_csv: bool = False) -> pd.DataFrame:
 
   # 3 Outlier-Flags / Clipping  ----------------------------------------
   outlier = (
-    ("passenger_count", "passenger_count_invalid", pl.min_passengers,
-     pl.max_passengers),
-    ("pickup_longitude", "pickup_longitude_invalid", gb.min_lon, gb.max_lon),
-    ("pickup_latitude", "pickup_latitude_invalid", gb.min_lat, gb.max_lat),
-    ("dropoff_longitude", "dropoff_longitude_invalid", gb.min_lon, gb.max_lon),
-    ("dropoff_latitude", "dropoff_latitude_invalid", gb.min_lat, gb.max_lat),
+    ("passenger_count", "passenger_count_invalid",
+     taxi_constants.PassengerLimits.min_passengers,
+     taxi_constants.PassengerLimits.max_passengers),
+    ("pickup_longitude", "pickup_longitude_invalid",
+     taxi_constants.GeoBounds.min_lon,
+     taxi_constants.GeoBounds.max_lon),
+    ("pickup_latitude", "pickup_latitude_invalid",
+     taxi_constants.GeoBounds.min_lat, taxi_constants.GeoBounds.max_lat),
+    ("dropoff_longitude", "dropoff_longitude_invalid",
+     taxi_constants.GeoBounds.min_lon, taxi_constants.GeoBounds.max_lon),
+    ("dropoff_latitude", "dropoff_latitude_invalid",
+     taxi_constants.GeoBounds.min_lat, taxi_constants.GeoBounds.max_lat),
     ("trip_duration", "trip_duration_outlier",
      taxi_constants.TripDurationLimits.min_sec,
-     taxi_constants.TripDurationLimits.max_sec),
+     taxi_constants.TripDurationLimits.max_sec)
   )
 
-  df["is_group_trip"] = (df["passenger_count"] >= 2).astype("int8")
+  df = shared_utilities.flag_and_clip(df, outlier)
 
-  for src, flag, lo, hi in outlier:
-    df = feat_utils.flag_and_clip(df, src, flag, lo, hi)
+  # 4 feature creation ----------------------------------------
+  df = taxi_utilities.add_store_and_fwd_flag(df)
+  df = taxi_utilities.add_us_holiday_flag(df, 'pickup_datetime')
+  df = taxi_utilities.add_trip_duration_features(df)
+  df = taxi_utilities.create_is_group_trip(df)
+  df = distance_utilities.add_haversine(df)
+  df = distance_utilities.add_route_distance(df)
+  df = taxi_utilities.add_time_features(df, taxi_constants.TIME_REF_COL)
+  df = taxi_utilities.get_jfk_flag(df)
+  df = taxi_utilities.get_la_gua(df)
 
-  # 4 feature engineering ----------------------------------------
-  df = feat_taxi.add_store_and_fwd_flag(df)
-  df = feat_taxi.add_us_holiday_flag(df, 'pickup_datetime')
-  df = feat_taxi.add_trip_duration_features(df)
-  df = feat_taxi.add_haversine(df)
+  if taxi_constants.ENABLE_MB:
+    df = taxi_utilities.create_geo_clusters(df, ['pickup_longitude',
+                                                 'pickup_latitude'],
+                                            'pickup',
+                                            taxi_constants.N_PICKUP_CLUSTERS,
+                                            modelling_constants.RANDOM_STATE,
+                                            taxi_constants.CLUSTER_BATCH_SIZE)
+    df = taxi_utilities.create_geo_clusters(df, ['dropoff_longitude',
+                                                 'dropoff_latitude'],
+                                            'dropoff',
+                                            taxi_constants.N_DROPOFF_CLUSTERS,
+                                            modelling_constants.RANDOM_STATE,
+                                            taxi_constants.CLUSTER_BATCH_SIZE)
 
-  df = create_route_distance(df)
-
-  df = feat_taxi.add_time_features(df, RAW_TIME_COL)
-
-  df['route_distance_log_km'] = np.log1p(df['route_distance_km'])
-
-  df = create_geo_clusters(df, ['pickup_longitude', 'pickup_latitude'],
-                           'pickup', n_pickup_clusters, RANDOM_STATE,
-                           batch_size)
-  df = create_geo_clusters(df, ['dropoff_longitude', 'dropoff_latitude'],
-                           'dropoff', n_dropoff_clusters, RANDOM_STATE,
-                           batch_size)
-  df = get_jfk_flag(df)
-  df = get_lgua(df)
+  if taxi_constants.ENABLE_HDBC:
+    df = cluster_utilities.add_hdbc_clusters(df, "pickup",
+                                             taxi_constants.PICKUP_COORDS,
+                                             taxi_constants.PICKUP_MIN_CLUSTER_SIZE,
+                                             taxi_constants.PICKUP_MIN_SAMPLES)
+    df = cluster_utilities.add_hdbc_clusters(df, "dropoff",
+                                             taxi_constants.DROPOFF_COORDS,
+                                             taxi_constants.DROPOFF_MIN_CLUSTER_SIZE,
+                                             taxi_constants.DROPOFF_MIN_SAMPLES)
 
   # 5 write CSV ---------------------------------------------------
   if save_csv:
-    Path(TAXI_PROCESSED_CSV).parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(TAXI_PROCESSED_CSV, index=False)
+    Path(
+        constants.path_file_constants.TAXI_PROCESSED_CSV).parent.mkdir(
+        parents=True,
+        exist_ok=True)
+    df.to_csv(constants.path_file_constants.TAXI_PROCESSED_CSV, index=False)
 
   return df
