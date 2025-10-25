@@ -1,3 +1,10 @@
+import folium
+import matplotlib.colors as mcolors
+import numpy as np
+import pandas as pd
+from shapely.geometry.multipoint import MultiPoint
+from sklearn.exceptions import NotFittedError
+
 from pipelines.training import rmse
 
 
@@ -109,3 +116,205 @@ def save_map(plt, model_name, map_name, x_col="", y_col=""):
       facecolor="white",
   )
   print(f"Saved figure to {safe_path}")
+
+
+def cluster_map(df, cluster_type):
+  df_z = df.sample(n=50000, random_state=42)
+
+  m = folium.Map(
+      location=[40.75, -73.97],
+      zoom_start=11,
+      tiles="CartoDB positron"
+  )
+
+  cluster_ids = sorted(df_z[cluster_type + "_cluster_hdb"].unique())
+  cmap = plt.colormaps["Set2"].resampled(len(cluster_ids))
+
+  palette = [mcolors.to_hex(cmap(i)) for i in range(len(cluster_ids))]
+  color_map = {cid: palette[i] for i, cid in enumerate(cluster_ids)}
+
+  for cid in cluster_ids:
+    pts = df_z[df_z[cluster_type + "_cluster_hdb"] == cid][
+      cluster_type + ["_longitude", cluster_type + "_latitude"]].values
+    if len(pts) < 3:
+      continue
+  hull = MultiPoint(pts).convex_hull
+  hull_coords = [(lat, lon) for lon, lat in hull.exterior.coords]
+  folium.Polygon(
+      locations=hull_coords,
+      color=color_map[cid],
+      weight=2,
+      fill=True,
+      fill_color=color_map[cid],
+      fill_opacity=0.2,
+      popup=f"Cluster {cid}"
+  ).add_to(m)
+
+  centroids = df.groupby(cluster_type + "_cluster_hdb")[
+    [cluster_type + "_latitude", cluster_type + "_longitude"]].mean()
+  for cid, row in centroids.iterrows():
+    folium.CircleMarker(
+        location=(row[cluster_type + "_latitude"],
+                  row[cluster_type + "_longitude"]),
+        radius=6,
+        color="black",
+        fill=True,
+        fill_color=color_map[cid],
+        fill_opacity=1.0,
+        popup=f"Centroid {cid}"
+    ).add_to(m)
+
+  m
+
+  m.save("../figures/" + cluster_type + "_clusters_hdb.html")
+  png = m._to_png(5)
+  with open("../figures/" + cluster_type + "_clusters_hdb.png", "wb") as f:
+    f.write(png)
+
+def plot_residual_distribution(df_err, model_name, save_path=None):
+  """
+  Plots the distribution of residuals to assess bias and variance.
+  """
+  plt.figure(figsize=(8, 5))
+  sns.histplot(df_err['residual'], bins=50, kde=True, color='steelblue')
+
+  plt.axvline(0, color='red', linestyle='--', linewidth=1.2,
+              label="Zero Residual")
+  plt.title(f"Residual Distribution – {model_name}", fontsize=14,
+            weight="bold")
+  plt.xlabel("Residual (log-seconds)")
+  plt.ylabel("Frequency")
+  plt.legend()
+  plt.grid(alpha=0.3, linestyle='--')
+  plt.tight_layout()
+
+  if save_path:
+    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    print(f"✅ Saved residual distribution to {save_path}")
+  plt.show()
+
+def ensure_predictions_and_residuals(df_err, model, X, y, pred_col='y_pred',
+    resid_col='residual'):
+  """
+  Ensure df_err has prediction and residual columns. Returns updated df_err.
+  """
+  df = df_err.copy()
+
+  try:
+    _ = model.predict(X.iloc[:1]) if hasattr(X, "iloc") else model.predict(
+        X[:1])
+  except NotFittedError:
+    raise RuntimeError(
+      "Model is not fitted. Fit it before computing predictions.")
+  except Exception:
+
+    pass
+
+  if pred_col not in df.columns:
+    preds = model.predict(X)
+    preds = np.asarray(preds).ravel()
+    df[pred_col] = pd.Series(preds, index=X.index)
+
+  if resid_col not in df.columns:
+    # ensure y is a Series aligned to X
+    y_series = y.copy() if isinstance(y, pd.Series) else pd.Series(y,
+                                                                   index=X.index)
+    df[resid_col] = df[pred_col] - y_series
+
+  return df
+
+def plot_residual_scatter(df_err, model_name, save_path=None):
+  """
+  Plots residuals against predicted values to detect heteroscedasticity or bias.
+  """
+  plt.figure(figsize=(8, 5))
+  sns.scatterplot(
+      data=df_err,
+      x="y_pred",
+      y="residual",
+      alpha=0.4,
+      edgecolor=None,
+      color='royalblue'
+  )
+
+  plt.axhline(0, color='red', linestyle='--', linewidth=1.2,
+              label="Zero Residual")
+  plt.title(f"Residuals vs Predicted Values – {model_name}", fontsize=14,
+            weight="bold")
+  plt.xlabel("Predicted log(Trip Duration)")
+  plt.ylabel("Residual (Predicted - Actual)")
+  plt.legend()
+  plt.grid(alpha=0.3, linestyle='--')
+  plt.tight_layout()
+
+  if save_path:
+    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    print(f"✅ Saved residual scatter to {save_path}")
+  plt.show()
+
+def plot_residual_heatmap(df_err, model_name, x_col='dist_bin',
+    y_col='hour_of_day', save_path=None):
+  """
+  Visualizes mean residuals as a 2D heatmap across distance and time-of-day bins.
+  """
+
+  pivot_table = (
+    df_err
+    .groupby([y_col, x_col])
+    .agg(mean_residual=('residual', 'mean'))
+    .reset_index()
+    .pivot(index=y_col, columns=x_col, values='mean_residual')
+  )
+
+  plt.figure(figsize=(9, 6))
+  sns.heatmap(
+      pivot_table,
+      cmap="RdYlBu_r",
+      center=0,
+      linewidths=0.5,
+      cbar_kws={'label': 'Mean Residual (log-seconds)'}
+  )
+
+  plt.title(f"Residual Heatmap – {model_name}", fontsize=14, weight="bold")
+  plt.xlabel("Distance Bin (binned log-distance)")
+  plt.ylabel("Hour of Day")
+  plt.xticks(rotation=0)
+  plt.yticks(rotation=0)
+  plt.tight_layout()
+
+  if save_path:
+    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    print(f"✅ Saved heatmap to {save_path}")
+  plt.show()
+
+
+def show_corr_matrix(mask,corr ):
+  sns.set_theme(style="white")
+  sns.set_context("talk")
+  plt.figure(figsize=(12, 10))
+  ax = sns.heatmap(
+      corr,
+      mask=mask,
+      cmap="coolwarm",
+      vmin=-1,
+      vmax=1,
+      center=0,
+      annot=True,
+      fmt=".2f",
+      annot_kws={"size": 9},
+      linewidths=0.5,
+      linecolor="gray",
+      cbar_kws={"shrink": 0.75, "label": "Pearson r"},
+      square=False,
+  )
+  ax.set_title("Correlation Matrix of Numeric Features", fontsize=18,
+               fontweight="bold", pad=16)
+  ax.set_xlabel("Features", fontsize=12, labelpad=10)
+  ax.set_ylabel("Features", fontsize=12, labelpad=10)
+
+  plt.xticks(rotation=45, ha="right", fontsize=10)
+  plt.yticks(rotation=0, fontsize=10)
+
+  plt.tight_layout()
+  plt.show()
+

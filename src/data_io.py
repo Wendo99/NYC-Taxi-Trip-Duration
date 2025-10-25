@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import pickle
 from pathlib import Path
@@ -6,7 +8,8 @@ from zipfile import ZipFile
 import pandas as pd
 from kaggle import KaggleApi
 
-from src.constants import taxi_c, weather_c, core_c
+import constants.path_file_constants
+from pipelines.merge_pipeline import build_merged_dataset
 
 log = logging.getLogger(__name__)
 
@@ -75,24 +78,26 @@ def extract_csv_from_inner_zips(data_dir, extracted_dir):
 def load_taxi_data():
   log.info("Loading NYC taxi raw data …")
 
-  packed_file_path = taxi_c.TAXI_RAW_ZIP
-  csv_path = taxi_c.TAXI_RAW_CSV
-  pkl_path = taxi_c.TAXI_CACHE_PICKLE
+  packed_file_path = constants.path_file_constants.TAXI_RAW_ZIP
+  csv_path = constants.path_file_constants.TAXI_RAW_CSV
+  pkl_path = constants.path_file_constants.TAXI_CACHE_PICKLE
 
   if pkl_path.is_file():
     with open(pkl_path, "rb") as f:
       return pickle.load(f)
 
   if not packed_file_path.is_file():
-    core_c.ZIP_DIR.mkdir(parents=True, exist_ok=True)
+    constants.path_file_constants.ZIP_DIR.mkdir(parents=True, exist_ok=True)
     api = KaggleApi()
     download_kaggle_competition(api, "nyc-taxi-trip-duration",
-                                core_c.ZIP_DIR)
+                                constants.path_file_constants.ZIP_DIR)
 
   inner_zip_names = {"train.zip", "test.zip", "sample_submission.zip"}
-  extract_inner_zips(packed_file_path, core_c.ZIP_DIR, inner_zip_names)
+  extract_inner_zips(packed_file_path, constants.path_file_constants.ZIP_DIR,
+                     inner_zip_names)
 
-  extract_csv_from_inner_zips(core_c.ZIP_DIR, core_c.RAW_DIR)
+  extract_csv_from_inner_zips(constants.path_file_constants.ZIP_DIR,
+                              constants.path_file_constants.RAW_DIR)
 
   if not csv_path.is_file():
     raise FileNotFoundError(
@@ -101,7 +106,7 @@ def load_taxi_data():
   df = pd.read_csv(csv_path)
 
   if not pkl_path.is_file():
-    core_c.CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    constants.path_file_constants.CACHE_DIR.mkdir(parents=True, exist_ok=True)
   with open(pkl_path, "wb") as f:
     pickle.dump(df, f)
 
@@ -112,24 +117,26 @@ def load_weather_data() -> pd.DataFrame:
   log.info("Loading NYC weather raw data …")
 
   dataset_slug = "pschale/nyc-taxi-wunderground-weather"
-  packed_file_path = weather_c.WEATHER_RAW_ZIP
-  csv_path = weather_c.WEATHER_RAW_CSV1
+  packed_file_path = constants.path_file_constants.WEATHER_RAW_ZIP
+  csv_path = constants.path_file_constants.WEATHER_RAW_CSV1
   csv_name = csv_path.name
 
-  pkl_path = weather_c.WEATHER_CACHE_PICKLE
+  pkl_path = constants.path_file_constants.WEATHER_CACHE_PICKLE
 
   if pkl_path.is_file():
     with open(pkl_path, "rb") as f:
       return pickle.load(f)
 
   if not packed_file_path.is_file():
-    core_c.ZIP_DIR.mkdir(parents=True, exist_ok=True)
+    constants.path_file_constants.ZIP_DIR.mkdir(parents=True, exist_ok=True)
     api = KaggleApi()
-    download_kaggle_dataset(api, dataset_slug, core_c.ZIP_DIR)
+    download_kaggle_dataset(api, dataset_slug,
+                            constants.path_file_constants.ZIP_DIR)
     log.info("Weather ZIP downloaded.")
 
   if not csv_path.is_file():
-    extract_csv_from_zip(packed_file_path, csv_name, core_c.RAW_DIR)
+    extract_csv_from_zip(packed_file_path, csv_name,
+                         constants.path_file_constants.RAW_DIR)
     log.info("Weather CSV extracted.")
 
   if not csv_path.is_file():
@@ -138,8 +145,17 @@ def load_weather_data() -> pd.DataFrame:
   df = pd.read_csv(csv_path)
 
   if not pkl_path.is_file():
-    core_c.CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    constants.path_file_constants.CACHE_DIR.mkdir(parents=True, exist_ok=True)
   with open(pkl_path, "wb") as f:
     pickle.dump(df, f)
 
+  return df
+
+
+def load_taxi_weather_data(recompute=False):
+  csv = constants.path_file_constants.PROCESSED_DIR / "taxi_weather.csv"
+  if not csv.exists() or recompute:
+    df = build_merged_dataset(save_csv=True)
+  else:
+    df = pd.read_csv(csv)
   return df

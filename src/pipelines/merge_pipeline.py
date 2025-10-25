@@ -4,10 +4,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from constants.core_c import PROCESSED_DIR
-from constants.taxi_c import TAXI_PROCESSED_CSV
-from constants.weather_c import WEATHER_PROCESSED_CSV
-from features.weather import add_weather_interactions
+from constants.path_file_constants import TAXI_PROCESSED_CSV, \
+  WEATHER_PROCESSED_CSV, PROCESSED_DIR
+from utilities.weather_utilities import add_weather_interactions
 
 MERGED_CSV = Path(PROCESSED_DIR) / "taxi_weather.csv"
 

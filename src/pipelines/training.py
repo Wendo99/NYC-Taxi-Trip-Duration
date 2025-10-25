@@ -11,19 +11,9 @@ from sklearn.model_selection import KFold, cross_validate, RandomizedSearchCV, \
   cross_val_score
 from sklearn.pipeline import Pipeline
 
-from constants import core_c, features_c
-from constants.modelling_c import RANDOM_STATE, param_spaces
-from pipelines.merge_pipeline import build_merged_dataset
-from pipelines.models import build_model
-
-
-def load_taxi_weather_data(recompute=False):
-  csv = core_c.PROCESSED_DIR / "taxi_weather.csv"
-  if not csv.exists() or recompute:
-    df = build_merged_dataset(save_csv=True)
-  else:
-    df = pd.read_csv(csv)
-  return df
+import utilities.modelling_utilities
+from constants.modell_constants import RANDOM_STATE, param_spaces
+from pipelines.models_factory import build_model
 
 
 def get_feature_names_safe(preprocessor, original_cols):
@@ -115,10 +105,10 @@ def top_tree_features(
   if not isinstance(modell, Pipeline):
     raise TypeError("'pipe' must be a sklearn pipeline")
 
-  if "modell" not in modell.named_steps:
+  if "model" not in modell.named_steps:
     raise ValueError("Last pipeline step must be called 'modell'")
 
-  nam_steps = modell.named_steps["modell"]
+  nam_steps = modell.named_steps["model"]
   features = get_feature_names_safe(modell.named_steps["preprocessor"],
                                     x_train.columns)
 
@@ -289,19 +279,20 @@ def save_best(search, name):
   joblib.dump(search.best_estimator_, RESULTS_DIR / f"{name}_model.job")
 
 
-def search_hyperparameters(modell_name: str, x_train, y_train, n_iter):
-  pipeline = build_model(modell_name)
+def search_hyperparameters(modell_name: str, preprocessor, x_train, y_train,
+    n_iter):
+  pipeline = build_model(modell_name,preprocessor)
 
   search_modell = RandomizedSearchCV(
       estimator=pipeline,
       param_distributions=param_spaces[modell_name],
       n_iter=n_iter,
-      cv=3,
+      cv=5,
       scoring="neg_root_mean_squared_error",
       random_state=RANDOM_STATE,
       n_jobs=-1,
       verbose=1,
-      refit=False
+      refit=True
   )
 
   search_modell.fit(x_train, y_train)
@@ -325,6 +316,9 @@ def cv_train(modell_name: str, model_pipe, x_train, y_train):
 
 def fit_save_model(model_name, preprocessor, x_train, y_train,
     retrain=False, model_dir="../models"):
+  # after train_test_split
+  threshold = 5  # minutes
+  train_weights = np.where(y_train < threshold, 3.0, 1.0)
   os.makedirs(model_dir, exist_ok=True)
   model_path = os.path.join(model_dir, f"{model_name.lower()}.joblib")
   if os.path.exists(model_path) and not retrain:
@@ -365,7 +359,7 @@ def rmse_by_group(df, col):
 def list_res_errors(df_err, model_name: str):
   print(model_name)
 
-  for col in features_c.RES_COL:
+  for col in utilities.modelling_utilities.RES_COL:
     print(f"\n=== {col} ===")
     print(rmse_by_group(df_err, col).head(10))
 
