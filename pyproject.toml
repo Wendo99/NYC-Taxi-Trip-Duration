@@ -34,6 +34,17 @@ dev = ["jupyterlab", "ipykernel", "ruff", "pytest", "pandas-stubs", "mypy"]
 # Every other model in models_factory.py runs without this extra.
 xgb = ["xgboost>=2.1"]
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# src-layout: the importable package is src/nyc_taxi, not src itself.
+# Declaring a build backend is what makes `uv sync` install the project into
+# the environment, so `import nyc_taxi` works in notebooks, tests and scripts
+# without anyone having to set PYTHONPATH or mark a Sources Root.
+packages = ["src/nyc_taxi"]
+
 [tool.ruff]
 # This codebase indents with 2 spaces, not the PEP 8 default of 4. Ruff needs
 # telling, otherwise `ruff format` would reflow every file in the project.

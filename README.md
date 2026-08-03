@@ -104,18 +104,80 @@ the same whether it runs from `notebooks/`, `src/` or the repository root.
 
 ## Setup
 
-Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
+### 1. Install uv
+
+[uv](https://docs.astral.sh/uv/) manages the virtual environment, the Python
+version and the dependencies together.
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+On Windows, in PowerShell:
+
+```powershell
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Homebrew users can run `brew install uv` instead.
+
+### 2. Create the environment and install everything
 
 ```bash
 uv sync
 ```
 
-That installs the exact locked versions and needs no system libraries. To run
-the full pipeline end to end:
+One command does all of it:
+
+- creates `.venv/` in the project root
+- downloads Python 3.11 if it is not already present (the version is pinned in
+  `.python-version`)
+- installs the exact versions from `uv.lock` — not "whatever PyPI ships today"
+- installs this project itself, so `import nyc_taxi` works everywhere without
+  setting `PYTHONPATH`
+
+No system libraries are required.
+
+### 3. Run things
+
+`uv run` uses `.venv` automatically, so **activation is optional**:
 
 ```bash
-uv run python src/nyc_taxi/main.py
+uv run python -m nyc_taxi.main    # build every dataset
+uv run pytest                     # run the test suite
+uv run jupyter lab                # open the notebooks
 ```
+
+If you would rather activate the environment and use plain `python`:
+
+```bash
+source .venv/bin/activate         # macOS / Linux
+.venv\Scripts\activate            # Windows
+```
+
+Then `python -m nyc_taxi.main`, `pytest`, and so on. `deactivate` exits.
+
+### Using an IDE
+
+Point the interpreter at `.venv/bin/python` (`.venv\Scripts\python.exe` on
+Windows). PyCharm and VS Code both detect `.venv/` in the project root
+automatically. Because the project is installed into the environment, no
+"Sources Root" marking or `PYTHONPATH` entry is needed.
+
+### Without uv
+
+`uv.lock` can be exported for plain pip:
+
+```bash
+uv export --format requirements-txt --no-hashes > requirements.txt
+
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+The export begins with `-e .`, so that last command installs the project
+itself along with its 59 pinned dependencies — no separate step needed.
 
 ### Optional extras
 
