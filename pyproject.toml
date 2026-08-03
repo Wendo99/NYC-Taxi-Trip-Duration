@@ -22,7 +22,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["jupyterlab", "ipykernel", "ruff", "pytest"]
+# pandas ships no py.typed marker, so type checkers and IDEs fall back to
+# whatever stubs they bundle. PyCharm's render read_csv's overloads without
+# their defaults, producing a spurious "no overload matches" on the ordinary
+# read_csv(path) call. pandas-stubs is the pandas team's official stub
+# package and takes precedence over bundled stubs. mypy is what these stubs
+# are checked with.
+dev = ["jupyterlab", "ipykernel", "ruff", "pytest", "pandas-stubs", "mypy"]
 # Optional: the xgboost wheel does not bundle the OpenMP runtime, so on macOS
 # it additionally requires a system libomp (`brew install libomp`).
 # Every other model in models_factory.py runs without this extra.

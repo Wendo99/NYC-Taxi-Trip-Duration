@@ -15,7 +15,7 @@ from sklearn.pipeline import Pipeline
 
 from nyc_taxi.config.modell_constants import RANDOM_STATE, param_spaces
 from nyc_taxi.config.path_file_constants import ARTIFACTS_DIR, MODELS_DIR
-from pipelines.models_factory import build_model
+from nyc_taxi.pipelines.models_factory import build_model
 from utilities.modelling_utilities import RES_COL
 
 # Name of the estimator step inside the pipelines built by models_factory.

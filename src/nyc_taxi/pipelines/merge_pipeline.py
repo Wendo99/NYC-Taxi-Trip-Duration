@@ -1,9 +1,11 @@
+"""Join the processed taxi and weather datasets on the shared hour key."""
 from __future__ import annotations
 
 import pandas as pd
 
 from nyc_taxi.config.path_file_constants import MERGED_CSV, TAXI_PROCESSED_CSV, \
   WEATHER_PROCESSED_CSV
+from nyc_taxi.frames import read_frame
 from utilities.weather_utilities import add_weather_interactions
 
 
@@ -31,17 +33,17 @@ def merge_taxi_weather(
   pd.DataFrame
       Combined data.
   """
-  taxi_df = pd.read_csv(TAXI_PROCESSED_CSV) if taxi_df is None else taxi_df
-  weather_df = (
-    pd.read_csv(WEATHER_PROCESSED_CSV) if weather_df is None else weather_df
+  taxi = read_frame(TAXI_PROCESSED_CSV) if taxi_df is None else taxi_df
+  weather = (
+    read_frame(WEATHER_PROCESSED_CSV) if weather_df is None else weather_df
   )
 
-  if on not in taxi_df.columns or on not in weather_df.columns:
+  if on not in taxi.columns or on not in weather.columns:
     raise KeyError(f"join key {on!r} must exist in both frames")
 
   return pd.merge(
-      taxi_df,
-      weather_df,
+      taxi,
+      weather,
       how="left",
       on=on,
       validate="many_to_one",

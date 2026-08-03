@@ -7,10 +7,12 @@ import pandas as pd
 
 import nyc_taxi.config.weather_constants as weather_constants
 # Re-exported: these moved to the constants layer to break a circular import,
-# but the weather notebook imports them from here.
-from nyc_taxi.config.weather_constants import OrdinalScale, make_map
-
-__all__ = ["OrdinalScale", "make_map"]
+# but the weather notebook imports them from here. The redundant ``as`` form
+# is the conventional way to mark a deliberate re-export (PEP 484), and unlike
+# an ``__all__`` entry it does not narrow this module's public surface — an
+# ``__all__`` here made every other import from this module look undeclared.
+from nyc_taxi.config.weather_constants import OrdinalScale as OrdinalScale
+from nyc_taxi.config.weather_constants import make_map as make_map
 
 
 def fahrenheit_to_celsius(df, col, new_col):

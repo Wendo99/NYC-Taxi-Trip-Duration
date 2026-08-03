@@ -12,9 +12,9 @@ from sklearn.linear_model import Ridge
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-from pipelines.training import (get_feature_names_safe, importance_table,
-                                top_generic_features, top_linreg_features,
-                                top_tree_features)
+from nyc_taxi.pipelines.training import (get_feature_names_safe, importance_table,
+                                         top_generic_features, top_linreg_features,
+                                         top_tree_features)
 
 Dataset = Tuple[pd.DataFrame, pd.Series]
 

@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from nyc_taxi.config import path_file_constants as paths, weather_constants as w
+from nyc_taxi.frames import read_frame
 from data_io import load_weather_data
 from utilities import shared_utilities as feat_utils
 from utilities import weather_utilities as feat_weather
@@ -32,8 +33,8 @@ def build_weather_dataset(
   load_weather_data()
 
   # 1a. Read both raw CSVs   ----------
-  csv1 = pd.read_csv(paths.WEATHER_RAW_CSV1)
-  csv2 = pd.read_csv(paths.WEATHER_RAW_CSV2)
+  csv1 = read_frame(paths.WEATHER_RAW_CSV1)
+  csv2 = read_frame(paths.WEATHER_RAW_CSV2)
   df = pd.concat([csv1, csv2], ignore_index=True)
 
   df["datetime"] = pd.to_datetime(df["timestamp"], errors="coerce")

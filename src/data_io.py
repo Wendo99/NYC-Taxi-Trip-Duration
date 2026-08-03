@@ -20,7 +20,8 @@ import pandas as pd
 from kaggle import KaggleApi
 
 from nyc_taxi.config import path_file_constants as paths
-from pipelines.merge_pipeline import build_merged_dataset
+from nyc_taxi.frames import read_frame
+from nyc_taxi.pipelines.merge_pipeline import build_merged_dataset
 
 log = logging.getLogger(__name__)
 
@@ -106,7 +107,7 @@ def _load_with_cache(pkl_path: Path, csv_path: Path,
   if not csv_path.is_file():
     raise FileNotFoundError(f"'{csv_path}' was not found - unpacking failed.")
 
-  df = pd.read_csv(csv_path)
+  df = read_frame(csv_path)
 
   pkl_path.parent.mkdir(parents=True, exist_ok=True)
   with open(pkl_path, "wb") as f:
@@ -154,4 +155,4 @@ def load_taxi_weather_data(recompute: bool = False) -> pd.DataFrame:
   """The merged taxi+weather modelling set, rebuilding it when absent."""
   if recompute or not paths.MERGED_CSV.exists():
     return build_merged_dataset(save_csv=True)
-  return pd.read_csv(paths.MERGED_CSV)
+  return read_frame(paths.MERGED_CSV)

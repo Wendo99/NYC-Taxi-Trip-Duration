@@ -1,6 +1,6 @@
-import pipelines.merge_pipeline as merge_pipeline
-import pipelines.taxi_pipeline as taxi_pipeline
-import pipelines.weather_pipeline as weather_pipeline
+import nyc_taxi.pipelines.merge_pipeline as merge_pipeline
+import nyc_taxi.pipelines.taxi_pipeline as taxi_pipeline
+import nyc_taxi.pipelines.weather_pipeline as weather_pipeline
 
 SAVE_TAXI = True
 SAVE_WEATHER = True

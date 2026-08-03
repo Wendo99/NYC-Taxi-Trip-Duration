@@ -28,7 +28,7 @@ def build_taxi_dataset(save_csv: bool = False) -> pd.DataFrame:
   pandas.DataFrame
       A copy of the raw taxi data after basic cleaning, outlier flagging and
       feature engineering (time features, Haversine distance, holiday and
-      airport flags, geo clusters), ready for modelling.
+      airport flags, geo clusters), ready for modeling.
 
   Notes
   -----
