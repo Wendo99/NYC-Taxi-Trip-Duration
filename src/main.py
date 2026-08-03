@@ -6,6 +6,7 @@ SAVE_TAXI = True
 SAVE_WEATHER = True
 MERGE = True
 
-taxi_pipeline.build_taxi_dataset(SAVE_TAXI)
-weather_pipeline.build_weather_dataset(SAVE_WEATHER)
-merge_pipeline.build_merged_dataset(MERGE)
+if __name__ == '__main__':
+  taxi_pipeline.build_taxi_dataset(SAVE_TAXI)
+  weather_pipeline.build_weather_dataset(SAVE_WEATHER)
+  merge_pipeline.build_merged_dataset(MERGE)
