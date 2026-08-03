@@ -33,3 +33,32 @@ dev = ["jupyterlab", "ipykernel", "ruff", "pytest", "pandas-stubs", "mypy"]
 # it additionally requires a system libomp (`brew install libomp`).
 # Every other model in models_factory.py runs without this extra.
 xgb = ["xgboost>=2.1"]
+
+[tool.ruff]
+# This codebase indents with 2 spaces, not the PEP 8 default of 4. Ruff needs
+# telling, otherwise `ruff format` would reflow every file in the project.
+indent-width = 2
+line-length = 80
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# E/F  pyflakes + pycodestyle   I  import order
+# UP   pyupgrade                B  bugbear
+# PL   pylint                   SIM  simplification
+select = ["E", "F", "I", "UP", "B", "PL", "SIM"]
+
+[tool.ruff.lint.pylint]
+# Plotting and search helpers legitimately take a handful of knobs; the
+# default of 5 flags ordinary signatures like plot_residual_heatmap.
+max-args = 8
+max-positional-args = 8
+
+[tool.ruff.lint.per-file-ignores]
+# Test names are deliberately long and descriptive.
+# PLR2004: asserting against a literal is the entire point of a test — the
+# rule would have us hide every expected value behind a named constant.
+"tests/*" = ["E501", "PLR2004"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
