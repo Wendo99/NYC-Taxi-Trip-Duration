@@ -12,7 +12,6 @@ import nyc_taxi.config.weather_constants as weather_constants
 # an ``__all__`` entry it does not narrow this module's public surface — an
 # ``__all__`` here made every other import from this module look undeclared.
 from nyc_taxi.config.weather_constants import OrdinalScale as OrdinalScale
-from nyc_taxi.config.weather_constants import make_map as make_map
 
 
 def fahrenheit_to_celsius(df, col, new_col):
@@ -298,5 +297,3 @@ def classify_ordinal(series, scale: OrdinalScale) -> Any:
   """Map a numeric series onto the ordinal labels of *scale*."""
   to_labels = np.vectorize(scale.label, otypes=[object])
   return to_labels(series)
-
-

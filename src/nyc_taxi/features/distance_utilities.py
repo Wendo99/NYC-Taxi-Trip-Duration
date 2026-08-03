@@ -96,7 +96,6 @@ def add_route_distance(df):
     start_ix = done.shape[0]
     df_remaining = df.iloc[start_ix:].copy()
   else:
-    start_ix = 0
     df_remaining = df.copy()
     # Deliberately no empty seed frame here: pandas >= 3.0 keeps the object
     # dtype of an empty operand through concat, which would turn

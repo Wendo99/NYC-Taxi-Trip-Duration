@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import numpy as np
-from sklearn.cluster._hdbscan import hdbscan
+from sklearn.cluster import HDBSCAN
 from sklearn.neighbors import NearestNeighbors
 
 import nyc_taxi.config.taxi_constants as taxi_constants
@@ -33,14 +33,24 @@ def run_hdbscan_sample(coords_deg,
     min_cluster_size=150,
     min_samples=None,
     sample_size=100_000,
-    seed=42):
+    seed=42,
+    max_assign_dist: float | None = None):
+  """Cluster a sample with HDBSCAN, then label the rest by nearest core point.
+
+  Parameters
+  ----------
+  max_assign_dist
+      Optional haversine cutoff, in radians, beyond which a point is left
+      unlabelled (-1) instead of inheriting its nearest core point's cluster.
+      ``None`` (the default) assigns regardless of distance.
+  """
   n = len(coords_deg)
   rng = np.random.default_rng(seed)
   samp_ix = rng.choice(n, min(n, sample_size), replace=False)
   samp = coords_deg[samp_ix]
   coords_rad = np.radians(samp)
 
-  clusterer = hdbscan.HDBSCAN(
+  clusterer = HDBSCAN(
       min_cluster_size=min_cluster_size,
       min_samples=min_samples or min_cluster_size // 10,
       metric="haversine",
@@ -57,10 +67,13 @@ def run_hdbscan_sample(coords_deg,
     full_coords_rad = np.radians(coords_deg)
     dist, idx = nbrs.kneighbors(full_coords_rad, return_distance=True)
     nn_lbl = clusterer.labels_[core_mask][idx.ravel()]
-    try:
-      threshold = clusterer.minimum_spanning_tree_.max()
-    except AttributeError:
-      threshold = np.inf
+    # This previously read `clusterer.minimum_spanning_tree_.max()` inside a
+    # try/except AttributeError. That attribute belongs to the standalone
+    # `hdbscan` package, not sklearn's port, which exposes only labels_,
+    # probabilities_ and n_features_in_ — so the except branch fired every
+    # time and the cutoff was always inf. The cutoff is now an explicit
+    # parameter; the default keeps the behaviour that was actually in effect.
+    threshold = np.inf if max_assign_dist is None else max_assign_dist
     mask = (full_lbl == -1) & (dist.ravel() <= threshold)
     full_lbl[mask] = nn_lbl[mask]
 

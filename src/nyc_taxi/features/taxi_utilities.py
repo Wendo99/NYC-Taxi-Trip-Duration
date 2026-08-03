@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from pandas.tseries.holiday import USFederalHolidayCalendar
+from pandas.tseries.holiday import get_calendar
 from sklearn.cluster import MiniBatchKMeans
 
-from utilities.distance_utilities import _check_columns
+from nyc_taxi.features.distance_utilities import _check_columns
 
 
 # ------------------------------------------------------------------ #
@@ -36,7 +36,11 @@ def add_us_holiday_flag(
 
   df[dt_col] = pd.to_datetime(df[dt_col], errors="coerce")
 
-  cal = USFederalHolidayCalendar()
+  # Looked up through the public registry: pandas' __all__ for
+  # pandas.tseries.holiday lists get_calendar but not the calendar classes
+  # themselves, so importing USFederalHolidayCalendar directly reaches past
+  # the module's declared API. Same class, same holidays.
+  cal = get_calendar("USFederalHolidayCalendar")
   holidays = cal.holidays(
       start=df[dt_col].min().normalize(),
       end=df[dt_col].max().normalize(),

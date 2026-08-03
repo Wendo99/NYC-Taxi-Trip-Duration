@@ -7,9 +7,9 @@ import pandas as pd
 
 from nyc_taxi.config import path_file_constants as paths, weather_constants as w
 from nyc_taxi.frames import read_frame
-from data_io import load_weather_data
-from utilities import shared_utilities as feat_utils
-from utilities import weather_utilities as feat_weather
+from nyc_taxi.data_io import load_weather_data
+from nyc_taxi.features import weather_utilities as feat_weather, \
+  shared_utilities as feat_utils
 
 log = logging.getLogger(__name__)
 

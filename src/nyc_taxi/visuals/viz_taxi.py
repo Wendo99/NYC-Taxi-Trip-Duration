@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import numpy as np
-from matplotlib import pyplot as plt
 
 from nyc_taxi.config import taxi_constants
 
