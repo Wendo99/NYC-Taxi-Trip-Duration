@@ -12,8 +12,8 @@ from sklearn.metrics import make_scorer, root_mean_squared_error
 from sklearn.model_selection import RandomizedSearchCV, cross_val_score
 from sklearn.pipeline import Pipeline
 
-from constants.modell_constants import RANDOM_STATE, param_spaces
-from constants.path_file_constants import ARTIFACTS_DIR, MODELS_DIR
+from nyc_taxi.config.modell_constants import RANDOM_STATE, param_spaces
+from nyc_taxi.config.path_file_constants import ARTIFACTS_DIR, MODELS_DIR
 from pipelines.models_factory import build_model
 from utilities.modelling_utilities import RES_COL
 
@@ -174,8 +174,12 @@ def top_generic_features(
 
 
 def search_hyperparameters(modell_name: str, preprocessor, x_train, y_train,
-    n_iter):
-  """Randomised search over ``param_spaces[modell_name]``; prints the best."""
+    n_iter, save: bool = False):
+  """Randomised search over ``param_spaces[modell_name]``; prints the best.
+
+  With ``save=True`` the winning params and estimator are written to
+  ``artifacts/`` so a long search does not have to be repeated.
+  """
   search_modell = RandomizedSearchCV(
       estimator=build_model(modell_name, preprocessor),
       param_distributions=param_spaces[modell_name],
@@ -191,6 +195,9 @@ def search_hyperparameters(modell_name: str, preprocessor, x_train, y_train,
 
   print(f"Best {modell_name} CV score log-RMSE:", -search_modell.best_score_)
   print(f"Best {modell_name} hyper-parameters:", search_modell.best_params_)
+
+  if save:
+    save_search_results(search_modell, modell_name)
   return search_modell
 
 
