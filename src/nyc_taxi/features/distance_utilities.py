@@ -1,0 +1,138 @@
+"""Trip distance: haversine (always) and routed distance via OSRM (optional).
+
+``add_haversine`` is pure numpy and needs nothing external.
+``add_route_distance``
+calls a locally hosted OSRM server and is currently disabled in
+``taxi_pipeline``; it checkpoints to parquet after every chunk so an
+interrupted run resumes instead of restarting.
+"""
+from __future__ import annotations
+
+from collections.abc import Sequence
+
+import numpy as np
+import pandas as pd
+import requests
+from numpy.typing import ArrayLike
+from tqdm.asyncio import tqdm
+
+from nyc_taxi.config.path_file_constants import ROUTE_DIST_PARQUET
+
+EARTH_RADIUS_KM: float = 6_378.137
+OSRM_URL = "http://localhost:5001/route/v1/driving/"
+
+
+def haversine(
+    lat1: ArrayLike,
+    lon1: ArrayLike,
+    lat2: ArrayLike,
+    lon2: ArrayLike,
+    radius: float = EARTH_RADIUS_KM
+) -> np.ndarray:
+  """
+  Vectorised great‑circle distance between two points using the
+  haversine formula.
+  Parameters
+  ----------
+  lat1, lon1, lat2, lon2
+      Coordinate pairs in **decimal degrees**.  Can be floats, NumPy arrays,
+      or pandas Series – they are converted with ``np.asarray`` and support
+      broadcasting.
+  radius
+      Sphere radius in kilometres.  Defaults to the WGS‑84 equatorial value
+      (6378.137km).
+      Returns
+  -------
+  np.ndarray
+      Distance(s) in kilometres with the same broadcasted shape as the
+      inputs.
+  """
+  # Ensure NumPy arrays for broadcasting then convert to radians
+  lat1, lon1, lat2, lon2 = map(
+      np.radians, map(np.asarray, (lat1, lon1, lat2, lon2))
+  )
+  dlat = lat2 - lat1
+  dlon = lon2 - lon1
+  a = np.sin(dlat / 2.0) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(
+      dlon / 2.0
+  ) ** 2
+  return 2.0 * radius * np.arcsin(np.sqrt(a))
+
+
+def osrm_distance_km(pick_lon, pick_lat, drop_lon, drop_lat):
+  """Driving distance in km between two points, via a local OSRM server.
+
+  Requires OSRM listening on ``OSRM_URL``; there is no fallback.
+  """
+  url = (f"{OSRM_URL}"
+         f"{pick_lon},{pick_lat};{drop_lon},{drop_lat}"
+         "?overview=false")
+  r = requests.get(url, timeout=2)
+  if r.ok and r.json()["code"] == "Ok":
+    return r.json()["routes"][0]["distance"] / 1000.0  # metres → km
+  return np.nan
+
+
+def _check_columns(df: pd.DataFrame, cols: Sequence[str]) -> None:
+  missing = [c for c in cols if c not in df.columns]
+  if missing:
+    raise KeyError(f"Missing column(s) {missing}")
+
+
+def add_haversine(df: pd.DataFrame) -> pd.DataFrame:
+  """Add haversine distance in km + log1p(km)."""
+  needed = [
+    "pickup_latitude",
+    "pickup_longitude",
+    "dropoff_latitude",
+    "dropoff_longitude",
+  ]
+  _check_columns(df, needed)
+  df = df.copy()
+  df["hav_dist_km"] = haversine(
+      df["pickup_latitude"],
+      df["pickup_longitude"],
+      df["dropoff_latitude"],
+      df["dropoff_longitude"],
+  ).astype("float32")
+  df["hav_dist_km_log"] = np.log1p(df["hav_dist_km"]).astype("float32")
+  return df
+
+
+def add_route_distance(df):
+  """Add OSRM routed distance, checkpointing so an interrupted run resumes.
+
+  Results are appended to a parquet file after every chunk. On restart the
+  existing file is read and only the remaining rows are requested, which
+  matters because a full pass is ~1.4 M HTTP calls.
+  """
+  tqdm.pandas()
+  out = ROUTE_DIST_PARQUET
+  out.parent.mkdir(parents=True, exist_ok=True)
+  if out.exists():
+    done = pd.read_parquet(out)
+    start_ix = done.shape[0]
+    df_remaining = df.iloc[start_ix:].copy()
+  else:
+    df_remaining = df.copy()
+    # Deliberately no empty seed frame here: pandas >= 3.0 keeps the object
+    # dtype of an empty operand through concat, which would turn
+    # route_distance_km into object and break np.log1p below.
+    done = None
+  chunk = 50_000
+  for i in range(0, len(df_remaining), chunk):
+    sub = df_remaining.iloc[i:i + chunk].copy()
+    sub["route_distance_km"] = sub.progress_apply(
+        lambda row: osrm_distance_km(
+            row.pickup_longitude, row.pickup_latitude,
+            row.dropoff_longitude, row.dropoff_latitude
+        ), axis=1
+    ).astype("float32")
+
+    done = sub if done is None else pd.concat([done, sub], axis=0)
+    done.to_parquet(out, index=False)
+  if done is None:  # empty input and no checkpoint yet
+    done = df.assign(route_distance_km=pd.Series(dtype="float32"))
+  df = done
+  df['route_distance_log_km'] = np.log1p(df['route_distance_km'])
+  return df
