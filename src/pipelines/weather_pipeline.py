@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-import constants.path_file_constants
+from constants import path_file_constants as paths
 from constants import weather_constants as w
 from data_io import load_weather_data
-from src.utilities import shared_utilities as feat_utils
-from src.utilities import weather_utilities as feat_weather
+from utilities import shared_utilities as feat_utils
+from utilities import weather_utilities as feat_weather
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ def build_weather_dataset(
   ----------
   save_csv : bool, default ``False``
       If ``True`` the resulting data-set is written to
-      ``constants.weather_c.WEATHER_PROCESSED_CSV``.
+      ``constants.path_file_constants.WEATHER_PROCESSED_CSV``.
   verbose : bool, default ``False``
       Print intermediate shapes / timings.
   """
@@ -34,8 +33,8 @@ def build_weather_dataset(
   load_weather_data()
 
   # 1a. Read both raw CSVs   ----------
-  csv1 = pd.read_csv(Path(constants.path_file_constants.WEATHER_RAW_CSV1))
-  csv2 = pd.read_csv(Path(constants.path_file_constants.WEATHER_RAW_CSV2))
+  csv1 = pd.read_csv(paths.WEATHER_RAW_CSV1)
+  csv2 = pd.read_csv(paths.WEATHER_RAW_CSV2)
   df = pd.concat([csv1, csv2], ignore_index=True)
 
   df["datetime"] = pd.to_datetime(df["timestamp"], errors="coerce")
@@ -79,7 +78,7 @@ def build_weather_dataset(
     df = df.rename(columns={"datetime_hour": "datetime"})
   df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
 
-  # recompute time‐based utilities
+  # recompute time-based features
   df = feat_weather.add_time_features(df, datetime_col="datetime")
 
   # 8. Ordinal classifications   ----------
@@ -96,12 +95,9 @@ def build_weather_dataset(
 
   # 9. Persist if requested
   if save_csv:
-    Path(constants.path_file_constants.PROCESSED_DIR).mkdir(parents=True,
-                                                            exist_ok=True)
-    df.to_csv(constants.path_file_constants.WEATHER_PROCESSED_CSV, index=False)
+    df.to_csv(paths.WEATHER_PROCESSED_CSV, index=False)
     if verbose:
-      log.info("Written              : %s",
-               constants.path_file_constants.WEATHER_PROCESSED_CSV)
+      log.info("Written              : %s", paths.WEATHER_PROCESSED_CSV)
 
   if verbose:
     log.info("Final shape          : %s", df.shape)

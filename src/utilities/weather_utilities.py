@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Sequence
+
 import numpy as np
 import pandas as pd
+
+import constants.weather_constants as weather_constants
 
 
 @dataclass(frozen=True)
@@ -30,19 +33,16 @@ def fahrenheit_to_celsius(df, col, new_col):
 
 
 def miles_to_kilometers(df, col, new_col):
-  import constants.weather_constants as weather_constants
   df[new_col] = df[col] * weather_constants.MPH_TO_KPH
   return df
 
 
 def inch_to_millimeters(df, col, new_col):
-  import constants.weather_constants as weather_constants
   df[new_col] = df[col] * weather_constants.INCH_TO_MM
   return df
 
 
 def inch_mercury_to_hpa(df, col, new_col):
-  import constants.weather_constants as weather_constants
   df[new_col] = df[col] * weather_constants.IN_TO_HPA
   return df
 
@@ -61,11 +61,6 @@ def split_precip_into_rain_and_snow(df):
   df['snow_mm'] = df['precip_mm'].where(
       df['conditions'].str.contains('Snow', na=False), 0)
   return df
-
-
-def _ensure_category_codes(df: pd.DataFrame, cls_col: str,
-    code_col: str) -> None:
-  df[code_col] = df[cls_col].astype("category").cat.codes
 
 
 def _cat_codes(s: pd.Series) -> pd.Series:
@@ -93,35 +88,29 @@ def classify_and_code(
 
 
 def classify_temp(df: pd.DataFrame) -> None:
-  import constants.weather_constants as weather_constants
   classify_and_code(df, "temp_c", weather_constants.TEMP_SCALE, "temp")
 
 
 def classify_windspeed(df: pd.DataFrame) -> None:
-  import constants.weather_constants as weather_constants
   classify_and_code(df, "windspeed_kph", weather_constants.WIND_SCALE,
                     "windspeed")
 
 
 def classify_humidity(df: pd.DataFrame) -> None:
-  import constants.weather_constants as weather_constants
   classify_and_code(df, "humidity", weather_constants.HUMIDITY_SCALE,
                     "humidity")
 
 
 def classify_pressure(df: pd.DataFrame) -> None:
-  import constants.weather_constants as weather_constants
   classify_and_code(df, "pressure_hpa", weather_constants.PRESSURE_SCALE,
                     "pressure")
 
 
 def classify_rain(df: pd.DataFrame) -> None:
-  import constants.weather_constants as weather_constants
   classify_and_code(df, "rain_mm", weather_constants.RAIN_SCALE, "rain")
 
 
 def classify_snow(df: pd.DataFrame) -> None:
-  import constants.weather_constants as weather_constants
   classify_and_code(df, "snow_mm", weather_constants.SNOW_SCALE, "snow")
 
 
@@ -139,33 +128,37 @@ COND_TO_FREEZING = {
 }
 
 
+def classify_from_conditions(df: pd.DataFrame, dst_prefix: str,
+    label_map: dict, default: str, code_map: dict) -> None:
+  """Derive ``{dst_prefix}_class`` / ``_code`` from the free-text conditions.
+
+  Shared by the cloud, haze and freezing classifiers, which previously
+  existed as three copies of this body.
+  """
+  cls_col = f"{dst_prefix}_class"
+  df[cls_col] = df["conditions"].map(label_map).fillna(default)
+  df[f"{dst_prefix}_code"] = df[cls_col].map(code_map)
+
+
 def classify_clouds(df):
-  import constants.weather_constants as weather_constants
-  df["cloud_class"] = (
-    df["conditions"].map(COND_TO_CLOUD).fillna("unknown")
-  )
-  df["cloud_code"] = df["cloud_class"].map(weather_constants.CLOUD_MAP)
+  classify_from_conditions(df, "cloud", COND_TO_CLOUD, "unknown",
+                           weather_constants.CLOUD_MAP)
 
 
 def classify_haze(df):
-  import constants.weather_constants as weather_constants
-  df["hazy_class"] = (
-    df["conditions"].map(COND_TO_HAZE).fillna("no_haze")
-  )
-  df["hazy_code"] = df["hazy_class"].map(weather_constants.HAZE_MAP)
+  classify_from_conditions(df, "hazy", COND_TO_HAZE, "no_haze",
+                           weather_constants.HAZE_MAP)
 
 
 def classify_freezing(df):
-  import constants.weather_constants as weather_constants
-  df["freezing_class"] = (
-    df["conditions"].map(COND_TO_FREEZING).fillna("no_freezing_rain_fog")
-  )
-  df["freezing_code"] = df["freezing_class"].map(weather_constants.FREEZING_MAP)
+  classify_from_conditions(df, "freezing", COND_TO_FREEZING,
+                           "no_freezing_rain_fog",
+                           weather_constants.FREEZING_MAP)
 
 
 def classify_fog(df):
-  import constants.weather_constants as weather_constants
-  df["fog_class"] = df["fog"].apply(lambda x: "fog" if x == 1 else "no_fog")
+  """Fog comes from a binary column rather than the conditions text."""
+  df["fog_class"] = np.where(df["fog"] == 1, "fog", "no_fog")
   df["fog_code"] = df["fog_class"].map(weather_constants.FOG_MAP)
 
 
@@ -270,11 +263,6 @@ def clean_trace_values(
                                  trace=trace_symbol)
 
 
-def timestamp_to_datetime(df, col, new_col):
-  df[new_col] = pd.to_datetime(df[col])
-  return df
-
-
 def add_time_features(df, datetime_col):
   df['datetime_hour'] = df[datetime_col].dt.floor('h')
   return _add_time_features_from_hour(df)
@@ -282,15 +270,18 @@ def add_time_features(df, datetime_col):
 
 def _add_time_features_from_hour(df: pd.DataFrame) -> pd.DataFrame:
   """
-  Adds time-based utilities derived from 'datetime_hour':
+  Adds time-based features derived from 'datetime_hour':
   - hour_of_day: hour [0–23]
   - hour_of_year: absolute hour count since year start
+
+  ``hour_of_year`` is the join key against the taxi dataset, so this must stay
+  in step with ``taxi_utilities.add_time_features``.
 
   Parameters:
       df (pd.DataFrame): DataFrame with 'datetime_hour' column
 
   Returns:
-      pd.DataFrame: DataFrame with new time utilities
+      pd.DataFrame: DataFrame with the new time features
   """
   df = df.copy()
   df['hour_of_day'] = df['datetime_hour'].dt.hour
@@ -302,7 +293,7 @@ def _add_time_features_from_hour(df: pd.DataFrame) -> pd.DataFrame:
 
 def add_weather_interactions(df: pd.DataFrame) -> pd.DataFrame:
   """
-  Create interaction utilities between rainfall/snowfall and time/weekend flags.
+  Create interaction features between rainfall/snowfall and time/weekend flags.
 
   - rain_rush_am:   rain_mm × is_rush_am
   - rain_rush_pm:   rain_mm × is_rush_pm
@@ -316,9 +307,7 @@ def add_weather_interactions(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def classify_ordinal(series, scale: OrdinalScale) -> Any:
-
-
-
+  """Map a numeric series onto the ordinal labels of *scale*."""
   to_labels = np.vectorize(scale.label, otypes=[object])
   return to_labels(series)
 
