@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from typing import Sequence
 
 import numpy as np
@@ -8,6 +7,8 @@ import pandas as pd
 import requests
 from numpy.typing import ArrayLike
 from tqdm.asyncio import tqdm
+
+from constants.path_file_constants import ROUTE_DIST_PARQUET
 
 EARTH_RADIUS_KM: float = 6_378.137
 OSRM_URL = "http://localhost:5001/route/v1/driving/"
@@ -88,19 +89,22 @@ def add_haversine(df: pd.DataFrame) -> pd.DataFrame:
 
 def add_route_distance(df):
   tqdm.pandas()
-  out = "../data/derived/with_route_dist.parquet"
-  if os.path.exists(out):
+  out = ROUTE_DIST_PARQUET
+  out.parent.mkdir(parents=True, exist_ok=True)
+  if out.exists():
     done = pd.read_parquet(out)
     start_ix = done.shape[0]
     df_remaining = df.iloc[start_ix:].copy()
   else:
     start_ix = 0
     df_remaining = df.copy()
-    done = pd.DataFrame(columns=df.columns.tolist() + ["route_distance_km"])
-  tqdm.pandas()
+    # Deliberately no empty seed frame here: pandas >= 3.0 keeps the object
+    # dtype of an empty operand through concat, which would turn
+    # route_distance_km into object and break np.log1p below.
+    done = None
   chunk = 50_000
   for i in range(0, len(df_remaining), chunk):
-    sub = df_remaining.iloc[i:i + chunk]
+    sub = df_remaining.iloc[i:i + chunk].copy()
     sub["route_distance_km"] = sub.progress_apply(
         lambda row: osrm_distance_km(
             row.pickup_longitude, row.pickup_latitude,
@@ -108,8 +112,10 @@ def add_route_distance(df):
         ), axis=1
     ).astype("float32")
 
-    done = pd.concat([done, sub], axis=0)
+    done = sub if done is None else pd.concat([done, sub], axis=0)
     done.to_parquet(out, index=False)
+  if done is None:  # empty input and no checkpoint yet
+    done = df.assign(route_distance_km=pd.Series(dtype="float32"))
   df = done
   df['route_distance_log_km'] = np.log1p(df['route_distance_km'])
   return df
