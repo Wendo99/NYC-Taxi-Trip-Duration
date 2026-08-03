@@ -1,9 +1,34 @@
+"""Exploratory plots for the raw taxi data (used by notebooks/taxi.ipynb)."""
+from __future__ import annotations
+
+import matplotlib.dates as mdates
+import matplotlib.ticker as mticker
 import numpy as np
 from matplotlib import pyplot as plt
-import matplotlib.ticker as mticker
-import matplotlib.dates as mdates
 
 from constants import taxi_constants
+
+
+def _thousands_axis(ax) -> None:
+  """Format the y axis with thousands separators, no scientific offset."""
+  ax.yaxis.set_major_formatter(mticker.StrMethodFormatter("{x:,.0f}"))
+  ax.yaxis.get_offset_text().set_visible(False)
+
+
+def _annotate_bars(ax, bars, values, headroom: float = 0.03,
+    rotation: int = 0) -> None:
+  """Write each bar's value above it and leave room for the labels.
+
+  Extracted from plot_passenger_counts / plot_trip_day / plot_trip_hour,
+  which each carried their own copy of this loop.
+  """
+  values = np.asarray(values)
+  top = values.max() if len(values) else 0
+  offset = top * headroom if top > 0 else 0.1
+  for bar, val in zip(bars, values):
+    ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + offset,
+            f"{int(val):,}", ha="center", va="bottom", fontsize=9,
+            rotation=rotation, clip_on=False)
 
 
 def plot_rides_date(pickup_counts, dropoff_counts):
@@ -27,18 +52,9 @@ def plot_passenger_counts(pc):
   counts, edges, patches = ax.hist(pc, bins=bins, color='skyblue',
                                    edgecolor='black', alpha=0.8)
 
-  # annotate counts above each bar
-  offset = max(counts) * 0.01
-  for rect, count in zip(patches, counts):
-    x = rect.get_x() + rect.get_width() / 2
-    y = rect.get_height()
-    ax.text(x, y + offset, int(count), ha='center', va='bottom', fontsize=9)
-
-  # remove scientific notation and show thousands separators
   ax.ticklabel_format(style='plain', axis='y')  # disable 1e6 offset
-  ax.yaxis.set_major_formatter(
-      mticker.StrMethodFormatter('{x:,.0f}'))  # e.g. 1,234,567
-  ax.yaxis.get_offset_text().set_visible(False)
+  _thousands_axis(ax)
+  _annotate_bars(ax, patches, counts, headroom=0.01)
 
   ax.set_xlabel("Number of Passengers per ride")
   ax.set_ylabel("Number of Rides")
@@ -100,16 +116,8 @@ def plot_trip_day(df):
 
   ax.set_ylim(0, counts.max() * 1.15 if counts.max() > 0 else 1)
 
-  # use StrMethodFormatter for thousands separators; do NOT call ticklabel_format
-  ax.yaxis.set_major_formatter(mticker.StrMethodFormatter('{x:,.0f}'))
-  ax.yaxis.get_offset_text().set_visible(False)
-
-  offset = counts.max() * 0.03 if counts.max() > 0 else 0.1
-  for bar, val in zip(bars, counts.values):
-    x = bar.get_x() + bar.get_width() / 2
-    y = bar.get_height()
-    ax.text(x, y + offset, f'{int(val):,}', ha='center', va='bottom',
-            fontsize=9)
+  _thousands_axis(ax)
+  _annotate_bars(ax, bars, counts.values)
 
   ax.set_xlabel('Day of Week')
   ax.set_ylabel('Number of Trips')
@@ -132,18 +140,9 @@ def plot_trip_hour(df):
   # increase vertical headroom so labels clear the top border
   ax.set_ylim(0, counts.max() * 1.30 if counts.max() > 0 else 1)
 
-  # format y axis with thousands separators
-  ax.yaxis.set_major_formatter(mticker.StrMethodFormatter('{x:,.0f}'))
-  ax.yaxis.get_offset_text().set_visible(False)
-
-  # larger annotation offset and disable clipping so labels are fully visible
-  offset = counts.max() * 0.08 if counts.max() > 0 else 0.8
-  for bar, val in zip(bars, counts.values):
-    x = bar.get_x() + bar.get_width() / 2
-    y = bar.get_height()
-    ax.text(x, y + offset, f'{int(val):,}', rotation=45, ha='center',
-            va='bottom',
-            fontsize=9, clip_on=False)
+  _thousands_axis(ax)
+  # larger offset and rotated labels, since 24 bars sit close together
+  _annotate_bars(ax, bars, counts.values, headroom=0.08, rotation=45)
 
   ax.set_xlim(left=-0.75, right=23.75)
   ax.set_xticks(range(24))
