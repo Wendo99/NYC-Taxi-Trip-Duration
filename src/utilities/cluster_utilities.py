@@ -1,7 +1,8 @@
+"""HDBSCAN-based geo clustering (optional; enabled via ENABLE_HDBC)."""
+from __future__ import annotations
+
 import numpy as np
-import pandas as pd
 from sklearn.cluster._hdbscan import hdbscan
-from sklearn.metrics import silhouette_score
 from sklearn.neighbors import NearestNeighbors
 
 import constants.taxi_constants as taxi_constants
@@ -66,74 +67,3 @@ def run_hdbscan_sample(coords_deg,
   return full_lbl
 
 
-def optimize_cluster_params(df, cluster_type='pickup', param_grid=None,
-    sample_size=10_000,
-    seed=42,
-    min_silhouette_threshold=0.2):
-  """
-  Optimizes clustering parameters using silhouette score.
-  Applies a minimum silhouette score threshold to filter out poor results.
-
-  Args:
-      df (pd.DataFrame): DataFrame with coordinates.
-      cluster_type (str): 'pickup' or 'dropoff'.
-      param_grid (list): List of dicts with parameters.
-      sample_size (int): Sample size for evaluation.
-      seed (int): Random seed.
-      min_silhouette_threshold (float): Minimum acceptable silhouette score.
-
-  Returns:
-      dict: Best parameter combination and a DataFrame summary.
-  """
-  mask = get_geo_mask(df)
-
-  if cluster_type == "pickup":
-    coords = df.loc[mask, ["pickup_latitude", "pickup_longitude"]].to_numpy()
-  elif cluster_type == "dropoff":
-    coords = df.loc[mask, ["dropoff_latitude", "dropoff_longitude"]].to_numpy()
-
-  if param_grid is None:
-    # Expanded grid for NYC cab pickup coordinates
-    param_grid = [{
-      'min_cluster_size': size,
-      'min_samples': max(2, size // 10)
-    } for size in
-      [10, 20, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900
-       ]]
-
-  df_sample = df.sample(n=sample_size, random_state=seed)
-  coords = df_sample[coords].to_numpy()
-
-  results = []
-  best_score = -1
-  best_params = None
-
-  for params in param_grid:
-    labels = run_hdbscan_sample(coords,
-                                min_cluster_size=params['min_cluster_size'],
-                                min_samples=params['min_samples'],
-                                sample_size=sample_size,
-                                seed=seed)
-    mask = labels != -1
-    unique_labels = np.unique(labels[mask])
-    if len(unique_labels) <= 1:
-      score = -1
-    else:
-      try:
-        score = silhouette_score(coords[mask], labels[mask], random_state=42)
-        if score < min_silhouette_threshold:
-          score = -1
-      except Exception:
-        score = -1
-    results.append({
-      'min_cluster_size': params['min_cluster_size'],
-      'min_samples': params['min_samples'],
-      'silhouette_score': score,
-      'n_clusters': len(unique_labels)
-    })
-    if score > best_score:
-      best_score = score
-      best_params = params.copy()
-
-  results_df = pd.DataFrame(results)
-  return {'best_params': best_params, 'results': results_df}
