@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from constants.path_file_constants import MERGED_CSV, TAXI_PROCESSED_CSV, \
+from nyc_taxi.config.path_file_constants import MERGED_CSV, TAXI_PROCESSED_CSV, \
   WEATHER_PROCESSED_CSV
 from utilities.weather_utilities import add_weather_interactions
 

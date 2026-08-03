@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pandas as pd
 
-import constants.modell_constants as modelling_constants
-import constants.taxi_constants as taxi_constants
-from constants import path_file_constants as paths
+import nyc_taxi.config.modell_constants as modelling_constants
+import nyc_taxi.config.taxi_constants as taxi_constants
+from nyc_taxi.config import path_file_constants as paths
 import data_io
 import utilities.cluster_utilities as cluster_utilities
 import utilities.distance_utilities as distance_utilities

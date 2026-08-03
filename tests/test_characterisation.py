@@ -12,8 +12,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import constants.taxi_constants as tc
-from constants import weather_constants as w
+import nyc_taxi.config.taxi_constants as tc
+from nyc_taxi.config import weather_constants as w
 from fixtures import weather_frame, taxi_frame
 from utilities import distance_utilities as du
 from utilities import shared_utilities as su

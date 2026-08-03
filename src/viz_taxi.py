@@ -6,7 +6,7 @@ import matplotlib.ticker as mticker
 import numpy as np
 from matplotlib import pyplot as plt
 
-from constants import taxi_constants
+from nyc_taxi.config import taxi_constants
 
 
 def _thousands_axis(ax) -> None:

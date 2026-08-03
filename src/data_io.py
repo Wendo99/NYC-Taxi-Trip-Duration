@@ -19,7 +19,7 @@ from zipfile import ZipFile
 import pandas as pd
 from kaggle import KaggleApi
 
-from constants import path_file_constants as paths
+from nyc_taxi.config import path_file_constants as paths
 from pipelines.merge_pipeline import build_merged_dataset
 
 log = logging.getLogger(__name__)

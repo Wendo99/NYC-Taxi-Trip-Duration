@@ -1,7 +1,7 @@
 """Feature groupings used when breaking model error down by segment."""
 from __future__ import annotations
 
-from constants.features_constants import FEATURES, GEO_DROP, GEO_PICK, \
+from nyc_taxi.config.features_constants import FEATURES, GEO_DROP, GEO_PICK, \
   RES_TABLE_EXCLUDE_FEATURES
 
 

@@ -3,8 +3,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import Ridge, BayesianRidge
 from sklearn.pipeline import Pipeline
 
-import constants.modell_constants as model_constants
-from constants.modell_constants import RANDOM_STATE
+import nyc_taxi.config.modell_constants as model_constants
+from nyc_taxi.config.modell_constants import RANDOM_STATE
 
 XGB_INSTALL_HINT = (
   "XGBoost is an optional dependency of this project. Install it with "

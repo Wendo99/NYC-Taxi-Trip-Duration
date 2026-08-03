@@ -8,7 +8,7 @@ import requests
 from numpy.typing import ArrayLike
 from tqdm.asyncio import tqdm
 
-from constants.path_file_constants import ROUTE_DIST_PARQUET
+from nyc_taxi.config.path_file_constants import ROUTE_DIST_PARQUET
 
 EARTH_RADIUS_KM: float = 6_378.137
 OSRM_URL = "http://localhost:5001/route/v1/driving/"

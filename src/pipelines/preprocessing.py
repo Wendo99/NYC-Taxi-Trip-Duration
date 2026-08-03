@@ -8,7 +8,7 @@ from sklearn.impute import KNNImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
 
-from constants.features_constants import CAT_ALL, GEO_DROP, GEO_PICK, NUM_ALL
+from nyc_taxi.config.features_constants import CAT_ALL, GEO_DROP, GEO_PICK, NUM_ALL
 
 
 def cast_features(df: pd.DataFrame, features, dtype: str) -> pd.DataFrame:

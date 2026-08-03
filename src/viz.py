@@ -13,7 +13,7 @@ import pandas as pd
 import seaborn as sns
 from sklearn.exceptions import NotFittedError
 
-from constants.path_file_constants import FIGURES_DIR
+from nyc_taxi.config.path_file_constants import FIGURES_DIR
 
 
 def unique_path(path) -> Path:

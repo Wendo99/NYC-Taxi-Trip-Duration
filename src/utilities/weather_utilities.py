@@ -5,10 +5,10 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-import constants.weather_constants as weather_constants
+import nyc_taxi.config.weather_constants as weather_constants
 # Re-exported: these moved to the constants layer to break a circular import,
 # but the weather notebook imports them from here.
-from constants.weather_constants import OrdinalScale, make_map
+from nyc_taxi.config.weather_constants import OrdinalScale, make_map
 
 __all__ = ["OrdinalScale", "make_map"]
 

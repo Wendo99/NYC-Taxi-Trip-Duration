@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.cluster._hdbscan import hdbscan
 from sklearn.neighbors import NearestNeighbors
 
-import constants.taxi_constants as taxi_constants
+import nyc_taxi.config.taxi_constants as taxi_constants
 
 
 def get_geo_mask(df):

@@ -5,8 +5,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-from constants import path_file_constants as paths
-from constants import weather_constants as w
+from nyc_taxi.config import path_file_constants as paths, weather_constants as w
 from data_io import load_weather_data
 from utilities import shared_utilities as feat_utils
 from utilities import weather_utilities as feat_weather
