@@ -1,6 +1,14 @@
+"""Construction of the candidate regressors, each wrapped in a pipeline.
+
+Estimators are built lazily so only the requested model is instantiated, and
+so an unusable optional dependency affects only its own entry — XGBoost needs
+a system OpenMP runtime that the wheel does not bundle.
+"""
+from __future__ import annotations
+
+from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression
-from sklearn.linear_model import Ridge, BayesianRidge
+from sklearn.linear_model import BayesianRidge, LinearRegression, Ridge
 from sklearn.pipeline import Pipeline
 
 import nyc_taxi.config.modell_constants as model_constants
@@ -18,7 +26,7 @@ def _build_xgboost():
   # instead of this whole module. Note the broad except: when libomp is
   # absent, xgboost raises XGBoostError at import time, not ImportError.
   try:
-    from xgboost import XGBRegressor
+    from xgboost import XGBRegressor  # noqa: PLC0415
   except Exception as exc:
     raise ImportError(f"{XGB_INSTALL_HINT}\n\nOriginal error: {exc}") from exc
 
@@ -36,7 +44,12 @@ def _build_xgboost():
                       )
 
 
-def build_model(model_name, preprocessor: None):
+def build_model(model_name: str, preprocessor: ColumnTransformer | None):
+  """Return the named estimator, wrapped in a pipeline if given one.
+
+  ``preprocessor`` was annotated ``None`` rather than ``ColumnTransformer |
+  None``, so every caller passing a real transformer looked like a type error.
+  """
   # Values are builders, not instances, so only the requested model is created.
   modell_builder = {
     "LinearRegression": lambda: LinearRegression(n_jobs=model_constants.N_JOBS),
@@ -50,8 +63,7 @@ def build_model(model_name, preprocessor: None):
                                                   min_samples_leaf=model_constants.RF_MIN_SAMPLES_LEAF,
                                                   ),
     'XGBoost': _build_xgboost,
-    'Bayes': lambda: BayesianRidge(
-    ),
+    'Bayes': BayesianRidge,  # already a zero-arg builder
 
   }
   modell = modell_builder[model_name]()

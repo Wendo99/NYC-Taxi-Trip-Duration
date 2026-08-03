@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Tuple
+from typing import Any
 
 import joblib
 import numpy as np
@@ -10,13 +10,12 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import make_scorer, root_mean_squared_error
-from sklearn.model_selection import RandomizedSearchCV, cross_val_score
+from sklearn.model_selection import RandomizedSearchCV
 from sklearn.pipeline import Pipeline
 
 from nyc_taxi.config.modell_constants import RANDOM_STATE, param_spaces
 from nyc_taxi.config.path_file_constants import ARTIFACTS_DIR, MODELS_DIR
 from nyc_taxi.pipelines.models_factory import build_model
-from nyc_taxi.features.modelling_utilities import RES_COL
 
 # Name of the estimator step inside the pipelines built by models_factory.
 MODEL_STEP = "model"
@@ -53,8 +52,15 @@ def importance_table(features, values, top_n: int,
 
   This block previously existed in four places (once in each of the three
   ``top_*_features`` helpers, and twice inside ``top_generic_features``).
+
+  Percentages are shares of the importance of **all** features, not just the
+  ``top_n`` displayed. Normalizing over the displayed subset instead made
+  ``rel_importance`` depend on ``top_n`` — the same feature read 52.96 % at
+  ``top_n=40`` and 62.88 % at ``top_n=15`` — and made ``cum_importance``
+  always end at 100 %, hiding how much of the model the table leaves out.
   """
   values = np.asarray(values, dtype=float)
+  total = values.sum()
   order = np.argsort(values)[::-1][:top_n]
 
   df = pd.DataFrame({
@@ -62,14 +68,13 @@ def importance_table(features, values, top_n: int,
     value_col: values[order],
   }).reset_index(drop=True)
 
-  total = df[value_col].sum()
   rel = df[value_col] / total if total else df[value_col] * 0.0
   df["rel_importance"] = (rel * 100).round(2)
   df["cum_importance"] = (rel.cumsum() * 100).round(2)
   return df
 
 
-def _require_pipeline(modell) -> Tuple[Any, ColumnTransformer]:
+def _require_pipeline(modell) -> tuple[Any, ColumnTransformer]:
   """Return (estimator, preprocessor) from a fitted project pipeline.
 
   The estimator is typed ``Any`` on purpose: it may be any of the regressors
@@ -206,17 +211,6 @@ def save_search_results(search, name: str) -> None:
   joblib.dump(search.best_estimator_, ARTIFACTS_DIR / f"{name}_model.joblib")
 
 
-def cv_train(modell_name: str, model_pipe, x_train, y_train):
-  """Report mean/std log-RMSE over a 3-fold cross-validation."""
-  log_rmses = -cross_val_score(model_pipe, x_train, y_train,
-                               scoring="neg_root_mean_squared_error",
-                               cv=3)
-  scores = pd.Series(log_rmses)
-  print(f"{modell_name} Log-RMSE (mean): {scores.mean():.6f}")
-  print(f"{modell_name} Log-RMSE (std): {scores.std():.6f}")
-  return scores
-
-
 def fit_save_model(model_name, preprocessor, x_train, y_train,
     retrain: bool = False, model_dir=None):
   """Fit and cache a model, or load the cached one when it already exists."""
@@ -263,14 +257,6 @@ def rmse_by_group(df, col):
                      lambda y: rmse(y, df.loc[y.index, "y_pred_log"])))
           .rmse
           .sort_values(ascending=False))
-
-
-def list_res_errors(df_err, model_name: str):
-  """Print the per-segment error table for every residual grouping column."""
-  print(model_name)
-  for col in RES_COL:
-    print(f"\n=== {col} ===")
-    print(rmse_by_group(df_err, col).head(10))
 
 
 def list_errors_10_bins(df_err, model_name: str, col):

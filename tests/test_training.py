@@ -1,7 +1,7 @@
 """Tests for the feature-importance helpers in pipelines.training."""
 from __future__ import annotations
 
-from typing import Tuple
+import json
 
 import numpy as np
 import pandas as pd
@@ -12,11 +12,17 @@ from sklearn.linear_model import Ridge
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-from nyc_taxi.pipelines.training import (get_feature_names_safe, importance_table,
-                                         top_generic_features, top_linreg_features,
-                                         top_tree_features)
+from nyc_taxi.pipelines import training as training_module
+from nyc_taxi.pipelines.training import (
+  get_feature_names_safe,
+  importance_table,
+  search_hyperparameters,
+  top_generic_features,
+  top_linreg_features,
+  top_tree_features,
+)
 
-Dataset = Tuple[pd.DataFrame, pd.Series]
+Dataset = tuple[pd.DataFrame, pd.Series]
 
 
 @pytest.fixture(scope="module")
@@ -90,6 +96,24 @@ def test_importance_table_respects_top_n():
   assert df["feature"].tolist() == ["a", "b"]
 
 
+def test_importance_percentages_are_shares_of_all_features():
+  """rel_importance must not depend on how many rows are displayed.
+
+  Normalising over the displayed subset made the same feature read a different
+  percentage at different top_n, and forced cum_importance to 100 % regardless
+  of how much of the model the table actually covered.
+  """
+  values = [5.0, 3.0, 1.0, 1.0]  # total 10
+  full = importance_table(list("abcd"), values, top_n=4)
+  clipped = importance_table(list("abcd"), values, top_n=2)
+
+  assert full["rel_importance"].tolist() == [50.0, 30.0, 10.0, 10.0]
+  # identical percentages, fewer rows
+  assert clipped["rel_importance"].tolist() == [50.0, 30.0]
+  assert clipped["cum_importance"].iloc[-1] == 80.0  # not 100 %
+  assert full["cum_importance"].iloc[-1] == 100.0
+
+
 # ------------------------------------------------------------ top_* rankings
 def test_top_linreg_ranks_the_informative_feature_first(ridge_pipe: Pipeline,
     data: Dataset):
@@ -142,3 +166,33 @@ def test_require_pipeline_rejects_a_wrongly_named_step(data: Dataset,
                     ("modell", Ridge())]).fit(x, y)
   with pytest.raises(ValueError, match="no step named"):
     top_linreg_features(wrong, x)
+
+
+# ------------------------------------------------- hyper-parameter search
+def test_search_hyperparameters_returns_a_fitted_search(data, preprocessor,
+    tmp_path, monkeypatch):
+  """The tuned constants in modell_constants came from this function.
+
+  It has no caller in the notebooks any more, so this test is what keeps it
+  honest: the search space in `param_spaces` must still line up with the step
+  names `build_model` produces, or the constants become unreproducible.
+  """
+  x, y = data
+  search = search_hyperparameters("Ridge", preprocessor, x, y, n_iter=2)
+
+  assert hasattr(search, "best_params_")
+  assert "model__alpha" in search.best_params_  # matches param_spaces["Ridge"]
+  assert search.best_score_ <= 0  # neg_root_mean_squared_error
+
+
+def test_search_hyperparameters_can_persist_its_result(data, preprocessor,
+    tmp_path, monkeypatch):
+  """save=True writes the winning params and estimator to artifacts/."""
+  monkeypatch.setattr(training_module, "ARTIFACTS_DIR", tmp_path)
+  x, y = data
+  search_hyperparameters("Ridge", preprocessor, x, y, n_iter=2, save=True)
+
+  params = tmp_path / "Ridge_best_params.json"
+  assert params.is_file()
+  assert "model__alpha" in json.loads(params.read_text())
+  assert (tmp_path / "Ridge_model.joblib").is_file()

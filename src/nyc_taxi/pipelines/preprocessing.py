@@ -8,7 +8,12 @@ from sklearn.impute import KNNImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
 
-from nyc_taxi.config.features_constants import CAT_ALL, GEO_DROP, GEO_PICK, NUM_ALL
+from nyc_taxi.config.features_constants import (
+  CAT_ALL,
+  GEO_DROP,
+  GEO_PICK,
+  NUM_ALL,
+)
 
 
 def cast_features(df: pd.DataFrame, features, dtype: str) -> pd.DataFrame:
@@ -38,20 +43,26 @@ def feature_to_category(df: pd.DataFrame, features) -> pd.DataFrame:
 
 
 def build_preprocessor() -> ColumnTransformer:
-  """Numeric impute+scale, ordinal encoding, one-hot for the geo clusters."""
+  """Numeric impute+scale, ordinal encoding, one-hot for the geo clusters.
+
+  ``memory=None`` is passed explicitly on each inner pipeline, matching
+  ``models_factory``: transformer caching is deliberately off, because the
+  cache would have to be invalidated by hand whenever the feature lists in
+  ``features_constants`` change.
+  """
   num_pipe = Pipeline([
     ("imputer", KNNImputer(missing_values=np.nan)),
     ("scale", StandardScaler()),
-  ])
+  ], memory=None)
 
   cat_pipe = Pipeline([
     ("encoder",
      OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)),
-  ])
+  ], memory=None)
 
   geo_pipe = Pipeline([
     ("onHot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
-  ])
+  ], memory=None)
 
   return ColumnTransformer([
     ("nums", num_pipe, NUM_ALL),
