@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from scipy.stats import uniform, randint
 
-# global settings # -----------------------------------------------------------
+# global settings -----------------------------------------------------------
 
 CV_FOLDS: int = 3
 
@@ -19,7 +19,6 @@ R_ALPHA = 1.3110318597055903
 
 # Random Forest ---------------------------------------------------
 
-# RF_N_ESTIMATORS = 142
 RF_MIN_SAMPLES_LEAF = 1
 RF_MAX_FEATURES = 1.0
 

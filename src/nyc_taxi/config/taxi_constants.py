@@ -21,7 +21,7 @@ ENABLE_HDBC = False
 PICKUP_MIN_CLUSTER_SIZE = 10
 PICKUP_MIN_SAMPLES = 2
 # Previously written with trailing commas, which silently made these tuples
-# ((10,) and (2,)) instead of ints.
+# ((10) and (2)) instead of ints.
 DROPOFF_MIN_CLUSTER_SIZE = 10
 DROPOFF_MIN_SAMPLES = 2
 
