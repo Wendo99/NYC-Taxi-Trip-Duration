@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pandas as pd
 
-from constants.path_file_constants import TAXI_PROCESSED_CSV, \
-  WEATHER_PROCESSED_CSV, PROCESSED_DIR
+from constants.path_file_constants import MERGED_CSV, TAXI_PROCESSED_CSV, \
+  WEATHER_PROCESSED_CSV
 from utilities.weather_utilities import add_weather_interactions
-
-MERGED_CSV = Path(PROCESSED_DIR) / "taxi_weather.csv"
 
 
 def merge_taxi_weather(
@@ -54,9 +50,9 @@ def merge_taxi_weather(
 
 
 def build_merged_dataset(save_csv: bool = False) -> pd.DataFrame:
+  """Join the processed taxi and weather sets and add interaction features."""
   df = merge_taxi_weather()
   df = add_weather_interactions(df)
   if save_csv:
-    MERGED_CSV.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(MERGED_CSV, index=False)
   return df
