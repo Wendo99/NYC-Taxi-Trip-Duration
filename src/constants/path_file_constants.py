@@ -19,6 +19,11 @@ TAXI_CACHE_PICKLE = CACHE_DIR / "taxi_cache.pkl"
 PROCESSED_DIR = DATA_DIR / "processed"
 TAXI_PROCESSED_CSV = PROCESSED_DIR / "taxi_clean.csv"
 
+# Resumable checkpoint for the OSRM route distances. Absolute, so the
+# pipeline resumes from the same file no matter which directory it runs in.
+DERIVED_DIR = DATA_DIR / "derived"
+ROUTE_DIST_PARQUET = DERIVED_DIR / "with_route_dist.parquet"
+
 WEATHER_RAW_ZIP = Path(
     f"{ZIP_DIR}/nyc-taxi-wunderground-weather.zip")  # original Kaggle zip
 WEATHER_RAW_CSV_NAME = "weatherdata.csv"
@@ -29,5 +34,5 @@ WEATHER_RAW_CSV2 = Path(
 WEATHER_CACHE_PICKLE = Path(f"{CACHE_DIR}/weather_cache.pkl")
 WEATHER_PROCESSED_CSV = Path(f"{PROCESSED_DIR}/weather_clean.csv")
 
-for _p in (RAW_DIR, PROCESSED_DIR, ZIP_DIR, CACHE_DIR):
+for _p in (RAW_DIR, PROCESSED_DIR, ZIP_DIR, CACHE_DIR, DERIVED_DIR):
   _p.mkdir(parents=True, exist_ok=True)
