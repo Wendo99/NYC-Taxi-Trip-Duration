@@ -1,30 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 import constants.weather_constants as weather_constants
+# Re-exported: these moved to the constants layer to break a circular import,
+# but the weather notebook imports them from here.
+from constants.weather_constants import OrdinalScale, make_map
 
-
-@dataclass(frozen=True)
-class OrdinalScale:
-  """Simple container for thresholds + labels (low . high)."""
-
-  thresholds: Sequence[float]
-  labels: Sequence[str]
-
-  def label(self, value: float | int | None) -> str:
-    """Return text label for a single numeric value."""
-    if value is None or (isinstance(value, float) and pd.isna(value)):
-      # NaN or missing value
-      return "unknown"
-    for thr, lab in zip(self.thresholds, self.labels):
-      if value <= thr:
-        return lab
-    return self.labels[-1]
+__all__ = ["OrdinalScale", "make_map"]
 
 
 def fahrenheit_to_celsius(df, col, new_col):
@@ -312,11 +298,3 @@ def classify_ordinal(series, scale: OrdinalScale) -> Any:
   return to_labels(series)
 
 
-def make_map(labels: Sequence[str], *, unknown_code: int | None = None,
-    start: int = 0) -> dict[str, int]:
-  """Return mapping ``label -> ordinal_code`` (plus optional 'unknown' key)."""
-  mapping: dict[str, int] = {lbl: i for i, lbl in
-                             enumerate(labels, start=start)}
-  if unknown_code is not None:
-    mapping["unknown"] = unknown_code
-  return mapping

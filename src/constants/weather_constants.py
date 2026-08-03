@@ -1,4 +1,44 @@
+"""Weather reference values, unit factors and ordinal scales.
+
+``OrdinalScale`` and ``make_map`` live here rather than in
+``utilities.weather_utilities`` because the scales below are built from them
+at import time. Defining them in utilities made constants depend on
+utilities — a cycle that was previously worked around by importing
+``weather_constants`` inside ten separate function bodies.
+"""
+from __future__ import annotations
+
 from dataclasses import dataclass
+from typing import Sequence
+
+import pandas as pd
+
+
+@dataclass(frozen=True)
+class OrdinalScale:
+  """Thresholds plus the labels they map onto, ordered low → high."""
+
+  thresholds: Sequence[float]
+  labels: Sequence[str]
+
+  def label(self, value: float | int | None) -> str:
+    """Return the text label for a single numeric value."""
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+      return "unknown"
+    for thr, lab in zip(self.thresholds, self.labels):
+      if value <= thr:
+        return lab
+    return self.labels[-1]
+
+
+def make_map(labels: Sequence[str], *, unknown_code: int | None = None,
+    start: int = 0) -> dict[str, int]:
+  """Return a ``label -> ordinal_code`` mapping, plus optional 'unknown'."""
+  mapping: dict[str, int] = {lbl: i for i, lbl in enumerate(labels, start=start)}
+  if unknown_code is not None:
+    mapping["unknown"] = unknown_code
+  return mapping
+
 
 # Physical reference values ---------------------------------------------------
 
@@ -23,12 +63,10 @@ class WindLimits:
 
 
 def _ordinal_scale(thresholds, labels):
-  from utilities.weather_utilities import OrdinalScale
   return OrdinalScale(thresholds=thresholds, labels=labels)
 
 
 def _make_map(labels, unknown_code=None):
-  from utilities.weather_utilities import make_map
   return make_map(labels, unknown_code=unknown_code)
 
 
