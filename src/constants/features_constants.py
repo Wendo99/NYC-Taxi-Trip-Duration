@@ -2,7 +2,6 @@ TARGET = "trip_duration_log"
 
 FEATURES = {
   # --- NUMERIC
-  'route_distance_log_km': ("num", False),
   "hav_dist_km_log": ("num", False),
 
   # --- CATEGORICAL
@@ -94,6 +93,7 @@ DROPPED_FEATURES = {
   "id": ("cat", False),
   "hav_dist_km": ("num", False),
   'route_distance_km': ("num", False),
+  'route_distance_log_km': ("num", False)
 }
 
 INVALID_COLS = [
