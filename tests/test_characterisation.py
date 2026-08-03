@@ -74,8 +74,8 @@ def taxi_features() -> pd.DataFrame:
   df = tu.create_is_group_trip(df)
   df = du.add_haversine(df)
   df = tu.add_time_features(df, tc.TIME_REF_COL)
-  df = tu.get_jfk_flag(df)
-  df = tu.get_la_gua(df)
+  for airport, (lon, lat) in tc.AIRPORT_BOXES.items():
+    df = tu.add_airport_flags(df, airport, lon, lat)
   return df
 
 
@@ -151,23 +151,21 @@ def test_jfk_dropoff_detected(taxi_features):
   assert taxi_features["is_jfk_pick"].tolist() == [0, 0, 0, 0, 0, 0]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="BUG: taxi_utilities.get_la_gua uses la_lat=(40.774, 40.765) — "
-           "the lower bound exceeds the upper bound, so the comparison can "
-           "never be true and the flag is 0 for every row.")
 def test_laguardia_dropoff_detected(taxi_features):
-  """Row 2 ends at LaGuardia and should be flagged, mirroring JFK."""
-  assert taxi_features["is_laguardia_drop"].tolist() == [0, 0, 1, 0, 0, 0]
+  """Row 2 ends at LaGuardia and is flagged, mirroring JFK.
 
-
-def test_laguardia_currently_always_zero(taxi_features):
-  """Pins the broken behaviour so the refactor cannot change it silently.
-
-  Delete this test together with the xfail above once the bounds are fixed.
+  Regression test for the inverted latitude bounds — la_lat used to read
+  (40.774, 40.765), so this flag was 0 for every row in the dataset.
   """
-  assert taxi_features["is_laguardia_pick"].sum() == 0
-  assert taxi_features["is_laguardia_drop"].sum() == 0
+  assert taxi_features["is_laguardia_drop"].tolist() == [0, 0, 1, 0, 0, 0]
+  assert taxi_features["is_laguardia_pick"].tolist() == [0, 0, 0, 0, 0, 0]
+
+
+def test_airport_bounding_boxes_are_min_max():
+  """An inverted box yields a silently-always-zero feature; forbid it."""
+  for name, (lon, lat) in tc.AIRPORT_BOXES.items():
+    assert lon[0] < lon[1], f"{name} longitude bounds inverted"
+    assert lat[0] < lat[1], f"{name} latitude bounds inverted"
 
 
 # ----------------------------------------------------------------- weather

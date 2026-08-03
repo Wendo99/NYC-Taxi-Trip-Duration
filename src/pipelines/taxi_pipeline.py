@@ -81,8 +81,8 @@ def build_taxi_dataset(save_csv: bool = False) -> pd.DataFrame:
   df = distance_utilities.add_haversine(df)
   # df = distance_utilities.add_route_distance(df)
   df = taxi_utilities.add_time_features(df, taxi_constants.TIME_REF_COL)
-  df = taxi_utilities.get_jfk_flag(df)
-  df = taxi_utilities.get_la_gua(df)
+  for _airport, (_lon, _lat) in taxi_constants.AIRPORT_BOXES.items():
+    df = taxi_utilities.add_airport_flags(df, _airport, _lon, _lat)
 
   if taxi_constants.ENABLE_MB:
     df = taxi_utilities.create_geo_clusters(df, ['pickup_longitude',

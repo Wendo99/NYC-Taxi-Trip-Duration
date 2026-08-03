@@ -113,45 +113,29 @@ def create_is_group_trip(df):
   return df
 
 
-def get_la_gua(df):
-  # Convert columns to NumPy arrays for pickups
-  lon = df["pickup_longitude"].to_numpy()
-  lat = df["pickup_latitude"].to_numpy()
-  # Define La Guardia boundaries (approximate)
-  la_lon = (-73.894, -73.861)
-  la_lat = (40.774, 40.765)
-  # Vectorized flag for La Guardia pickups
-  df["is_laguardia_pick"] = (
-      (la_lon[0] <= lon) & (lon <= la_lon[1]) &
-      (la_lat[0] <= lat) & (lat <= la_lat[1])
-  ).astype("int8")
-  # Repeat for drop-offs (update lon/lat arrays)
-  lon = df["dropoff_longitude"].to_numpy()
-  lat = df["dropoff_latitude"].to_numpy()
-  df["is_laguardia_drop"] = (
-      (la_lon[0] <= lon) & (lon <= la_lon[1]) &
-      (la_lat[0] <= lat) & (lat <= la_lat[1])
-  ).astype("int8")
-  return df
+def _within_box(lon, lat, lon_bounds, lat_bounds) -> np.ndarray:
+  """Vectorised point-in-bounding-box test."""
+  return (
+      (lon_bounds[0] <= lon) & (lon <= lon_bounds[1]) &
+      (lat_bounds[0] <= lat) & (lat <= lat_bounds[1])
+  )
 
 
-def get_jfk_flag(df):
-  # Convert columns to NumPy arrays
-  lon = df["pickup_longitude"].to_numpy()
-  lat = df["pickup_latitude"].to_numpy()
-  # Define JFK boundaries
-  jfk_lon = (-73.837, -73.745)  # widen by 0.01° east-west
-  jfk_lat = (40.622, 40.675)  # widen by 0.01° south-north
-  # Vectorized flag for JFK pickups
-  df["is_jfk_pick"] = (
-      (jfk_lon[0] <= lon) & (lon <= jfk_lon[1]) &
-      (jfk_lat[0] <= lat) & (lat <= jfk_lat[1])
-  ).astype("int8")
-  # Repeat for drop-offs (update lon/lat arrays)
-  lon = df["dropoff_longitude"].to_numpy()
-  lat = df["dropoff_latitude"].to_numpy()
-  df["is_jfk_drop"] = (
-      (jfk_lon[0] <= lon) & (lon <= jfk_lon[1]) &
-      (jfk_lat[0] <= lat) & (lat <= jfk_lat[1])
-  ).astype("int8")
+def add_airport_flags(df: pd.DataFrame, name: str, lon_bounds, lat_bounds
+    ) -> pd.DataFrame:
+  """Flag trips starting or ending inside an airport bounding box.
+
+  Adds ``is_{name}_pick`` and ``is_{name}_drop``. Replaces the former
+  ``get_jfk_flag`` / ``get_la_gua`` pair, which were identical apart from
+  their constants.
+  """
+  _check_columns(df, ["pickup_longitude", "pickup_latitude",
+                      "dropoff_longitude", "dropoff_latitude"])
+  for role in ("pickup", "dropoff"):
+    inside = _within_box(
+        df[f"{role}_longitude"].to_numpy(),
+        df[f"{role}_latitude"].to_numpy(),
+        lon_bounds, lat_bounds)
+    suffix = "pick" if role == "pickup" else "drop"
+    df[f"is_{name}_{suffix}"] = inside.astype("int8")
   return df

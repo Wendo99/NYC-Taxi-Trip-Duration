@@ -20,8 +20,30 @@ CLUSTER_BATCH_SIZE = 100_000
 ENABLE_HDBC = False
 PICKUP_MIN_CLUSTER_SIZE = 10
 PICKUP_MIN_SAMPLES = 2
-DROPOFF_MIN_CLUSTER_SIZE = 10,
-DROPOFF_MIN_SAMPLES = 2,
+# Previously written with trailing commas, which silently made these tuples
+# ((10,) and (2,)) instead of ints.
+DROPOFF_MIN_CLUSTER_SIZE = 10
+DROPOFF_MIN_SAMPLES = 2
+
+# Airport bounding boxes -------------------------------------------------------
+# (min, max) per axis. Bounds are validated at import time because an inverted
+# pair silently yields a flag that is always 0 — which is exactly what happened
+# to LaGuardia, whose latitudes used to read (40.774, 40.765).
+JFK_LON = (-73.837, -73.745)
+JFK_LAT = (40.622, 40.675)
+LAGUARDIA_LON = (-73.894, -73.861)
+LAGUARDIA_LAT = (40.765, 40.774)
+
+AIRPORT_BOXES = {
+  "jfk": (JFK_LON, JFK_LAT),
+  "laguardia": (LAGUARDIA_LON, LAGUARDIA_LAT),
+}
+
+for _name, (_lon, _lat) in AIRPORT_BOXES.items():
+  if _lon[0] >= _lon[1] or _lat[0] >= _lat[1]:
+    raise ValueError(
+        f"{_name}: bounding box must be (min, max) per axis, got "
+        f"lon={_lon}, lat={_lat}")
 
 
 # ------------------------------------------------------------
