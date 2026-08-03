@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from numpy.array_api import int32
 from pandas.tseries.holiday import USFederalHolidayCalendar
 from sklearn.cluster import MiniBatchKMeans
 
@@ -105,7 +104,7 @@ def create_geo_clusters(df, feature_cols, prefix, n_clusters, random_state,
                            batch_size=batch_size)
   cluster_labels = kmeans.fit_predict(coords)
   df[f'{prefix}_cluster'] = pd.Series(cluster_labels, index=df.index).astype(
-      int32)
+      np.int32)
   return df
 
 
