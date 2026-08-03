@@ -8,7 +8,25 @@ from __future__ import annotations
 
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+_ROOT_MARKER = "pyproject.toml"
+
+
+def _find_project_root(start: Path) -> Path:
+  """Walk upwards until the directory holding *pyproject.toml* is found.
+
+  Deliberately not ``parents[n]``: a hard-coded depth silently points at the
+  wrong directory the moment this module is moved between packages, which
+  makes every data path resolve under ``src/`` instead of the repo root.
+  """
+  for candidate in (start, *start.parents):
+    if (candidate / _ROOT_MARKER).is_file():
+      return candidate
+  raise RuntimeError(
+      f"could not locate {_ROOT_MARKER} above {start}; "
+      "the project layout is not what path_file_constants expects")
+
+
+PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
 
 # --- data ------------------------------------------------------------------
 DATA_DIR = PROJECT_ROOT / "data"
