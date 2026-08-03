@@ -8,6 +8,10 @@ dependencies = [
     "scipy>=1.13",
     "scikit-learn>=1.5",
     "joblib>=1.4",
+    # Parquet engine for the OSRM route-distance checkpoints in
+    # distance_utilities.add_route_distance(). Used via pandas.to_parquet,
+    # so it never shows up as a direct import.
+    "pyarrow>=16.0",
     "matplotlib>=3.9",
     "seaborn>=0.13",
     "folium>=0.17",
