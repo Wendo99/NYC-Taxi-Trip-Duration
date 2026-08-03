@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pandas as pd
 
 import constants.modell_constants as modelling_constants
-import constants.path_file_constants
 import constants.taxi_constants as taxi_constants
+from constants import path_file_constants as paths
 import data_io
 import utilities.cluster_utilities as cluster_utilities
 import utilities.distance_utilities as distance_utilities
@@ -22,15 +20,15 @@ def build_taxi_dataset(save_csv: bool = False) -> pd.DataFrame:
   ----------
   save_csv : bool, default ``False``
       When *True*, the function writes the resulting dataset to the path
-      defined in ``constants.taxi_const.TAXI_PROCESSED_CSV`` (overwriting any
-      existing file).
+      defined in ``constants.path_file_constants.TAXI_PROCESSED_CSV``
+      (overwriting any existing file).
 
   Returns
   -------
   pandas.DataFrame
-      A copy of the raw taxi data after basic cleaning, outlier flagging,
-      feature engineering (time‑utilities, Haversine distance, holiday flag,
-      etc.) and ready for modelling.
+      A copy of the raw taxi data after basic cleaning, outlier flagging and
+      feature engineering (time features, Haversine distance, holiday and
+      airport flags, geo clusters), ready for modelling.
 
   Notes
   -----
@@ -110,10 +108,6 @@ def build_taxi_dataset(save_csv: bool = False) -> pd.DataFrame:
 
   # 5 write CSV ---------------------------------------------------
   if save_csv:
-    Path(
-        constants.path_file_constants.TAXI_PROCESSED_CSV).parent.mkdir(
-        parents=True,
-        exist_ok=True)
-    df.to_csv(constants.path_file_constants.TAXI_PROCESSED_CSV, index=False)
+    df.to_csv(paths.TAXI_PROCESSED_CSV, index=False)
 
   return df
