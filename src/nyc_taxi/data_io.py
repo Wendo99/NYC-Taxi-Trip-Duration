@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import logging
 import pickle
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 from zipfile import ZipFile
 
 import pandas as pd
@@ -43,10 +43,12 @@ def _authenticated_api() -> KaggleApi:
 
 
 def download_kaggle_competition(api, competition_name, path):
+  """Download a competition's files into *path* (already-authenticated api)."""
   api.competition_download_files(competition_name, path=path)
 
 
 def download_kaggle_dataset(api, dataset_slug, path):
+  """Download a dataset's files into *path* (already-authenticated api)."""
   api.dataset_download_files(dataset_slug, path=str(path), unzip=False)
 
 

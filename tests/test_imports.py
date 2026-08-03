@@ -29,9 +29,12 @@ MODULES = sorted(
 @pytest.mark.parametrize("module", MODULES)
 def test_module_imports_standalone(module: str):
   """Importing any module first, in a clean interpreter, must succeed."""
+  # check=False on purpose: a non-zero exit is the thing under test, and the
+  # assertion below reports the child's stderr, which CalledProcessError would
+  # swallow.
   result = subprocess.run(
       [sys.executable, "-c", f"import {module}"],
-      cwd=SRC, capture_output=True, text=True, timeout=120,
+      cwd=SRC, capture_output=True, text=True, timeout=120, check=False,
   )
   assert result.returncode == 0, (
       f"`import {module}` failed in a fresh interpreter:\n{result.stderr}")

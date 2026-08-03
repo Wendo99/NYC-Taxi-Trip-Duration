@@ -1,6 +1,9 @@
-import nyc_taxi.pipelines.merge_pipeline as merge_pipeline
-import nyc_taxi.pipelines.taxi_pipeline as taxi_pipeline
-import nyc_taxi.pipelines.weather_pipeline as weather_pipeline
+"""Build every processed dataset, in dependency order.
+
+Run as a script: the taxi and weather tables are produced independently, then
+merged on ``hour_of_year``. Each stage writes to ``data/processed/``.
+"""
+from nyc_taxi.pipelines import merge_pipeline, taxi_pipeline, weather_pipeline
 
 SAVE_TAXI = True
 SAVE_WEATHER = True

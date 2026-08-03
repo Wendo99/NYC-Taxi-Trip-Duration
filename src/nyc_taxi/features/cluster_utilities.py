@@ -5,10 +5,11 @@ import numpy as np
 from sklearn.cluster import HDBSCAN
 from sklearn.neighbors import NearestNeighbors
 
-import nyc_taxi.config.taxi_constants as taxi_constants
+from nyc_taxi.config import taxi_constants
 
 
 def get_geo_mask(df):
+  """True where both pickup and dropoff fall inside the NYC bounding box."""
   mask = (
       (df["pickup_latitude"] > taxi_constants.GeoBounds.min_lat) &
       (df["pickup_latitude"] < taxi_constants.GeoBounds.max_lat) &
@@ -23,7 +24,13 @@ def get_geo_mask(df):
 
 
 def add_hdbc_clusters(df, cluster_type, coord, min_cluster_size, min_samples):
-  cluster_labels = run_hdbscan_sample(coords_deg=coord, min_cluster_size=min_cluster_size,min_samples=min_samples)
+  """Add an HDBSCAN cluster label for *cluster_type* ('pickup'/'dropoff').
+
+  Unclustered points keep -1. Only runs when ``ENABLE_HDBC`` is set.
+  """
+  cluster_labels = run_hdbscan_sample(coords_deg=coord,
+                                      min_cluster_size=min_cluster_size,
+                                      min_samples=min_samples)
   df[cluster_type + "_cluster_hdb"] = -1
   df.loc[get_geo_mask(df), cluster_type + "_cluster_hdb"] = cluster_labels
   return df

@@ -13,10 +13,12 @@ import pandas as pd
 import pytest
 
 import nyc_taxi.config.taxi_constants as tc
+from fixtures import taxi_frame, weather_frame
 from nyc_taxi.config import weather_constants as w
-from fixtures import weather_frame, taxi_frame
-from nyc_taxi.features import weather_utilities as wu, taxi_utilities as tu, \
-  shared_utilities as su, distance_utilities as du
+from nyc_taxi.features import distance_utilities as du
+from nyc_taxi.features import shared_utilities as su
+from nyc_taxi.features import taxi_utilities as tu
+from nyc_taxi.features import weather_utilities as wu
 
 OUTLIER_SPEC = (
   ("passenger_count", "passenger_count_invalid",

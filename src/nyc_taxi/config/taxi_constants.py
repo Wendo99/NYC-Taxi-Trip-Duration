@@ -1,3 +1,14 @@
+"""Cleaning bounds and clustering settings for the taxi dataset.
+
+The limit classes (``PassengerLimits``, ``TripDurationLimits``, ``GeoBounds``)
+drive ``flag_and_clip``: values outside a bound are flagged in a companion
+``*_invalid`` column and clipped to the boundary, rather than dropped, so the
+row count stays stable and the flag itself is available as a signal.
+
+``AIRPORT_BOXES`` is validated at import time — an inverted (min, max) pair
+yields a feature that is silently always zero, which is exactly what happened
+to LaGuardia before its latitudes were corrected.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass

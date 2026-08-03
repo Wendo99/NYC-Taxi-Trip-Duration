@@ -1,3 +1,4 @@
+"""Raw weather observations -> cleaned hourly table with ordinal classes."""
 from __future__ import annotations
 
 import logging
@@ -5,11 +6,12 @@ import logging
 import numpy as np
 import pandas as pd
 
-from nyc_taxi.config import path_file_constants as paths, weather_constants as w
-from nyc_taxi.frames import read_frame
+from nyc_taxi.config import path_file_constants as paths
+from nyc_taxi.config import weather_constants as w
 from nyc_taxi.data_io import load_weather_data
-from nyc_taxi.features import weather_utilities as feat_weather, \
-  shared_utilities as feat_utils
+from nyc_taxi.features import shared_utilities as feat_utils
+from nyc_taxi.features import weather_utilities as feat_weather
+from nyc_taxi.frames import read_frame
 
 log = logging.getLogger(__name__)
 

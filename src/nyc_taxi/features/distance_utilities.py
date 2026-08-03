@@ -1,6 +1,14 @@
+"""Trip distance: haversine (always) and routed distance via OSRM (optional).
+
+``add_haversine`` is pure numpy and needs nothing external.
+``add_route_distance``
+calls a locally hosted OSRM server and is currently disabled in
+``taxi_pipeline``; it checkpoints to parquet after every chunk so an
+interrupted run resumes instead of restarting.
+"""
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
@@ -52,6 +60,10 @@ def haversine(
 
 
 def osrm_distance_km(pick_lon, pick_lat, drop_lon, drop_lat):
+  """Driving distance in km between two points, via a local OSRM server.
+
+  Requires OSRM listening on ``OSRM_URL``; there is no fallback.
+  """
   url = (f"{OSRM_URL}"
          f"{pick_lon},{pick_lat};{drop_lon},{drop_lat}"
          "?overview=false")
@@ -88,6 +100,12 @@ def add_haversine(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def add_route_distance(df):
+  """Add OSRM routed distance, checkpointing so an interrupted run resumes.
+
+  Results are appended to a parquet file after every chunk. On restart the
+  existing file is read and only the remaining rows are requested, which
+  matters because a full pass is ~1.4 M HTTP calls.
+  """
   tqdm.pandas()
   out = ROUTE_DIST_PARQUET
   out.parent.mkdir(parents=True, exist_ok=True)

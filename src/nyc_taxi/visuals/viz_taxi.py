@@ -25,13 +25,17 @@ def _annotate_bars(ax, bars, values, headroom: float = 0.03,
   values = np.asarray(values)
   top = values.max() if len(values) else 0
   offset = top * headroom if top > 0 else 0.1
-  for bar, val in zip(bars, values):
+  # strict=True: one label per bar. A length mismatch means the caller paired
+  # the wrong series with the wrong axis, which should fail loudly rather
+  # than silently annotate only the shorter of the two.
+  for bar, val in zip(bars, values, strict=True):
     ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + offset,
             f"{int(val):,}", ha="center", va="bottom", fontsize=9,
             rotation=rotation, clip_on=False)
 
 
 def plot_rides_date(pickup_counts, dropoff_counts):
+  """Daily pickup and dropoff counts over the whole period."""
   _, ax = plt.subplots(figsize=(12, 5))
   pickup_counts.plot(ax=ax, label="Pick_ups", color='green', alpha=0.6)
   dropoff_counts.plot(ax=ax, label="Drop_offs", color='blue', alpha=0.6)
@@ -46,6 +50,7 @@ def plot_rides_date(pickup_counts, dropoff_counts):
 
 
 def plot_passenger_counts(pc):
+  """Histogram of passengers per ride, annotated with exact counts."""
   bins = np.arange(pc.min() - 0.5, pc.max() + 1.5, 1.0)
 
   _, ax = plt.subplots(figsize=(8, 5))
@@ -66,6 +71,7 @@ def plot_passenger_counts(pc):
 
 
 def plot_geo_distr(pickup_lon, pickup_lat, dropoff_lon, dropoff_lat):
+  """Scatter pickups and dropoffs, cropped to the NYC bounding box."""
   plt.figure(figsize=(6, 6))
   plt.scatter(pickup_lon, pickup_lat, s=0.5, alpha=0.1,
               label='pickup')
@@ -83,6 +89,7 @@ def plot_geo_distr(pickup_lon, pickup_lat, dropoff_lon, dropoff_lat):
 
 
 def plot_trips_month(df):
+  """Monthly trip totals."""
   if 'value' in df.columns:
     monthly = df.set_index('pickup_datetime').resample('ME')['value'].sum()
   else:
@@ -105,6 +112,7 @@ def plot_trips_month(df):
   plt.show()
 
 def plot_trip_day(df):
+  """Trip totals by day of week, Monday first."""
   day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
                'Saturday', 'Sunday']
   dow = df['pickup_datetime'].dt.day_name()
@@ -127,6 +135,7 @@ def plot_trip_day(df):
 
 
 def plot_trip_hour(df):
+  """Trip totals by hour of day, 0-23."""
   # aggregate by hour (0-23), ensure all hours present
   hours = df['pickup_datetime'].dt.hour.dropna().astype(int)
   counts = hours.value_counts().reindex(range(24),

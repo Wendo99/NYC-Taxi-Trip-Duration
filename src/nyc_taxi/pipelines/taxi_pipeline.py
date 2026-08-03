@@ -1,15 +1,18 @@
+"""Raw taxi trips -> cleaned, feature-engineered modelling table."""
 from __future__ import annotations
 
 import pandas as pd
 
 import nyc_taxi.config.modell_constants as modelling_constants
-import nyc_taxi.config.taxi_constants as taxi_constants
-from nyc_taxi.config import path_file_constants as paths
 from nyc_taxi import data_io
-import nyc_taxi.features.cluster_utilities as cluster_utilities
-import nyc_taxi.features.distance_utilities as distance_utilities
-import nyc_taxi.features.shared_utilities as shared_utilities
-import nyc_taxi.features.taxi_utilities as taxi_utilities
+from nyc_taxi.config import path_file_constants as paths
+from nyc_taxi.config import taxi_constants
+from nyc_taxi.features import (
+  cluster_utilities,
+  distance_utilities,
+  shared_utilities,
+  taxi_utilities,
+)
 
 
 def build_taxi_dataset(save_csv: bool = False) -> pd.DataFrame:

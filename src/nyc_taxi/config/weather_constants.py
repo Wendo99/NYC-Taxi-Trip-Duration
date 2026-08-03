@@ -8,24 +8,31 @@ utilities — a cycle that was previously worked around by importing
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 import pandas as pd
 
 
 @dataclass(frozen=True)
 class OrdinalScale:
-  """Thresholds plus the labels they map onto, ordered low → high."""
+  """Thresholds plus the labels they map onto, ordered low → high.
+
+  ``labels`` is deliberately one longer than ``thresholds``: N cut points
+  divide the number line into N+1 bands, and the final label is the
+  open-ended one above the highest threshold.
+  """
 
   thresholds: Sequence[float]
   labels: Sequence[str]
 
-  def label(self, value: float | int | None) -> str:
+  def label(self, value: float | None) -> str:
     """Return the text label for a single numeric value."""
     if value is None or (isinstance(value, float) and pd.isna(value)):
       return "unknown"
-    for thr, lab in zip(self.thresholds, self.labels):
+    # strict=False is required, not an oversight: labels is longer than
+    # thresholds by one, and that trailing label is returned below.
+    for thr, lab in zip(self.thresholds, self.labels, strict=False):
       if value <= thr:
         return lab
     return self.labels[-1]
@@ -34,7 +41,8 @@ class OrdinalScale:
 def make_map(labels: Sequence[str], *, unknown_code: int | None = None,
     start: int = 0) -> dict[str, int]:
   """Return a ``label -> ordinal_code`` mapping, plus optional 'unknown'."""
-  mapping: dict[str, int] = {lbl: i for i, lbl in enumerate(labels, start=start)}
+  mapping: dict[str, int] = {lbl: i
+                             for i, lbl in enumerate(labels, start=start)}
   if unknown_code is not None:
     mapping["unknown"] = unknown_code
   return mapping

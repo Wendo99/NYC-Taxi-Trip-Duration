@@ -1,3 +1,12 @@
+"""Feature engineering for the taxi trips.
+
+Each function takes a DataFrame and returns a copy with columns added, so the
+pipeline in ``taxi_pipeline`` reads as a chain of transformations. Note
+``add_time_features`` here derives *pickup*-based features; the same-named
+function in ``weather_utilities`` derives observation-hour features. Both
+produce ``hour_of_year``, which is the join key between the two datasets, so
+they must stay in step.
+"""
 from __future__ import annotations
 
 import numpy as np
@@ -49,8 +58,24 @@ def add_us_holiday_flag(
   return df
 
 
+# Time-of-day bands, inclusive on both ends, as hours 0-23. These encode the
+# NYC traffic rhythm that notebooks/taxi.ipynb section 4 measures: a trough
+# around 05:00 and a peak at 18:00.
+EARLY_MORNING_HOURS = (3, 5)
+RUSH_AM_HOURS = (6, 8)
+RUSH_PM_HOURS = (16, 18)
+NIGHT_STARTS_AT = 22        # 22:00 onwards ...
+NIGHT_ENDS_BEFORE = 3       # ... through to 02:59
+SATURDAY = 5                # dayofweek: Monday=0
+HOURS_PER_DAY = 24
+
+
 def add_time_features(df: pd.DataFrame, dt_col: str) -> pd.DataFrame:
-  """Derive hour, weekday, month, hour-of-year and weekend flag."""
+  """Derive hour, weekday, month, hour-of-year and the time-of-day flags.
+
+  ``hour_of_year`` is the join key to the weather data, so it must match
+  ``weather_utilities.add_time_features``.
+  """
   _check_columns(df, [dt_col])
   df = df.copy()
   ts = df[dt_col].dt
@@ -58,19 +83,17 @@ def add_time_features(df: pd.DataFrame, dt_col: str) -> pd.DataFrame:
   df["pickup_hour"] = ts.hour.astype("int8")
   df["pickup_weekday"] = ts.dayofweek.astype("int8")
   df["pickup_month"] = ts.month.astype("int8")
-  df["hour_of_year"] = ((ts.dayofyear - 1) * 24 + ts.hour).astype("int16")
-  df["is_weekend"] = (ts.dayofweek >= 5).astype("int8")
+  df["hour_of_year"] = (
+      (ts.dayofyear - 1) * HOURS_PER_DAY + ts.hour).astype("int16")
+  df["is_weekend"] = (ts.dayofweek >= SATURDAY).astype("int8")
 
-  df["is_early_morning"] = df["pickup_hour"].between(3, 5, 'both').astype(
+  hour = df["pickup_hour"]
+  df["is_early_morning"] = hour.between(*EARLY_MORNING_HOURS, 'both').astype(
       "int8")
-
-  df["is_rush_am"] = df["pickup_hour"].between(6, 8, 'both').astype("int8")
-
-  df["is_rush_pm"] = df["pickup_hour"].between(16, 18, 'both').astype("int8")
-
+  df["is_rush_am"] = hour.between(*RUSH_AM_HOURS, 'both').astype("int8")
+  df["is_rush_pm"] = hour.between(*RUSH_PM_HOURS, 'both').astype("int8")
   df["is_night"] = (
-      (df["pickup_hour"] < 3) |
-      (df["pickup_hour"] >= 22)
+      (hour < NIGHT_ENDS_BEFORE) | (hour >= NIGHT_STARTS_AT)
   ).astype("int8")
   return df
 
@@ -102,6 +125,11 @@ def add_store_and_fwd_flag(
 
 def create_geo_clusters(df, feature_cols, prefix, n_clusters, random_state,
     batch_size):
+  """Assign each row to a MiniBatchKMeans cluster over *feature_cols*.
+
+  Gives the model a coarse notion of neighbourhood that raw coordinates do
+  not; the clusters are one-hot encoded downstream.
+  """
   coords = df[feature_cols]
   kmeans = MiniBatchKMeans(n_clusters=n_clusters,
                            random_state=random_state,
@@ -112,8 +140,13 @@ def create_geo_clusters(df, feature_cols, prefix, n_clusters, random_state,
   return df
 
 
+GROUP_TRIP_MIN_PASSENGERS = 2
+
+
 def create_is_group_trip(df):
-  df["is_group_trip"] = (df["passenger_count"] >= 2).astype("int8")
+  """Flag trips carrying two or more passengers."""
+  df["is_group_trip"] = (
+      df["passenger_count"] >= GROUP_TRIP_MIN_PASSENGERS).astype("int8")
   return df
 
 
