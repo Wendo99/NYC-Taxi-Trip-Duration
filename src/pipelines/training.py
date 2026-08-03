@@ -1,12 +1,13 @@
-"""Model fitting, cross-validation, hyper-parameter search and error tables."""
+"""Model fitting, cross-validation, hyperparameter search and error tables."""
 from __future__ import annotations
 
 import json
-from typing import List, Tuple, Union
+from typing import Any, Tuple
 
 import joblib
 import numpy as np
 import pandas as pd
+from sklearn.compose import ColumnTransformer
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import make_scorer, root_mean_squared_error
 from sklearn.model_selection import RandomizedSearchCV, cross_val_score
@@ -22,41 +23,31 @@ MODEL_STEP = "model"
 PREPROCESSOR_STEP = "preprocessor"
 
 
-def get_feature_names_safe(preprocessor, original_cols):
-  """Best-effort feature names out of a fitted ColumnTransformer."""
-  names = []
-  for name, trans, cols, _ in preprocessor._iter(
-      fitted=True,
-      column_as_labels=False,
-      skip_empty_columns=True,
-      skip_drop=True
-  ):
-    if trans == "passthrough":
-      names.extend(
-          [original_cols[c] if isinstance(c, int) else c for c in cols])
-    elif hasattr(trans, "steps"):
-      last_step = trans.steps[-1][1]
-      if last_step == "passthrough" or last_step == "identity":
-        names.extend(
-            [original_cols[c] if isinstance(c, int) else c for c in cols])
-      elif hasattr(last_step, "get_feature_names_out"):
-        try:
-          names.extend(last_step.get_feature_names_out(cols))
-        except Exception:
-          names.extend([f"{name}__{c}" for c in cols])
-      else:
-        names.extend([f"{name}__{c}" for c in cols])
-    elif hasattr(trans, "get_feature_names_out"):
-      try:
-        names.extend(trans.get_feature_names_out(cols))
-      except Exception:
-        names.extend([f"{name}__{c}" for c in cols])
-    else:
-      names.extend([f"{name}__{c}" for c in cols])
-  return np.asarray(names)
+def get_feature_names_safe(preprocessor, original_cols=None) -> np.ndarray:
+  """Output feature names of a fitted ColumnTransformer, prefixes stripped.
+
+  ``ColumnTransformer.get_feature_names_out`` prepends the transformer name
+  (``nums__hav_dist_km_log``); the importance tables read better without it,
+  so the ``<transformer>__`` prefix is removed.
+
+  This replaces a hand-rolled walk over the private ``preprocessor._iter``,
+  which reimplemented — with several fallbacks — what sklearn has exposed
+  publicly since 1.0. Verified to produce identical names, in identical
+  order, for this project's preprocessor.
+
+  Parameters
+  ----------
+  preprocessor
+      A *fitted* ColumnTransformer.
+  original_cols
+      Unused; kept so existing call sites need no change.
+  """
+  del original_cols  # kept for backwards compatibility
+  names = preprocessor.get_feature_names_out()
+  return np.asarray([str(n).split("__", 1)[-1] for n in names])
 
 
-def _importance_table(features, values, top_n: int,
+def importance_table(features, values, top_n: int,
     value_col: str = "importance") -> pd.DataFrame:
   """Rank *features* by *values* and add relative/cumulative percentages.
 
@@ -78,8 +69,14 @@ def _importance_table(features, values, top_n: int,
   return df
 
 
-def _require_pipeline(modell) -> Tuple[object, object]:
-  """Return (estimator, preprocessor) from a fitted project pipeline."""
+def _require_pipeline(modell) -> Tuple[Any, ColumnTransformer]:
+  """Return (estimator, preprocessor) from a fitted project pipeline.
+
+  The estimator is typed ``Any`` on purpose: it may be any of the regressors
+  in ``models_factory``, and the callers below duck-type on ``coef_``,
+  ``feature_importances_`` or ``get_booster`` after an explicit ``hasattr``
+  guard.
+  """
   if not isinstance(modell, Pipeline):
     raise TypeError("'modell' must be a sklearn Pipeline")
   if MODEL_STEP not in modell.named_steps:
@@ -94,7 +91,7 @@ def top_linreg_features(modell, x_train, top_n: int = 20) -> pd.DataFrame:
     raise AttributeError("model has no attribute 'coef_'")
 
   features = get_feature_names_safe(preprocessor, x_train.columns)
-  return _importance_table(
+  return importance_table(
       features, np.abs(estimator.coef_.ravel()), top_n, value_col="abs_coef")
 
 
@@ -103,9 +100,14 @@ def top_tree_features(
     x_train,
     top_n: int = 20,
     xgb_importance: str = "gain",
-    as_dataframe: bool = True,
-) -> Union[pd.DataFrame, Tuple[List[str], np.ndarray]]:
-  """Rank features of a tree ensemble by impurity or gain importance."""
+) -> pd.DataFrame:
+  """Rank features of a tree ensemble by impurity or gain importance.
+
+  Always returns a DataFrame. The former ``as_dataframe=False`` branch, which
+  returned a ``(names, values)`` tuple, made the return type depend on an
+  argument value; it had no callers, and the same data is available as
+  ``df["feature"].tolist()`` / ``df["importance"].to_numpy()``.
+  """
   estimator, preprocessor = _require_pipeline(modell)
   features = get_feature_names_safe(preprocessor, x_train.columns)
 
@@ -120,11 +122,7 @@ def top_tree_features(
   else:
     raise TypeError("The model type is not supported.")
 
-  if not as_dataframe:
-    order = np.argsort(importance)[::-1][:top_n]
-    return np.asarray(features)[order].tolist(), importance[order]
-
-  return _importance_table(features, importance, top_n)
+  return importance_table(features, importance, top_n)
 
 
 def top_generic_features(
@@ -149,10 +147,10 @@ def top_generic_features(
   names = get_feature_names_safe(preprocessor, x_train.columns)
 
   if hasattr(estimator, "feature_importances_"):
-    return _importance_table(names, estimator.feature_importances_, top_n)
+    return importance_table(names, estimator.feature_importances_, top_n)
 
   if hasattr(estimator, "coef_"):
-    return _importance_table(
+    return importance_table(
         names, np.abs(estimator.coef_.ravel()), top_n, value_col="abs_coef")
 
   if subsample is not None and subsample < len(x_train):
@@ -170,7 +168,7 @@ def top_generic_features(
       random_state=random_state,
       n_jobs=-1,
   )
-  return _importance_table(names, result.importances_mean, top_n)
+  return importance_table(names, result.importances_mean, top_n)
 
 
 def search_hyperparameters(modell_name: str, preprocessor, x_train, y_train,
