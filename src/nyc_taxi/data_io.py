@@ -152,7 +152,7 @@ def load_weather_data() -> pd.DataFrame:
 
 
 def load_taxi_weather_data(recompute: bool = False) -> pd.DataFrame:
-  """The merged taxi+weather modelling set, rebuilding it when absent."""
+  """The merged taxi+weather modeling set, rebuilding it when absent."""
   if recompute or not paths.MERGED_CSV.exists():
     return build_merged_dataset(save_csv=True)
   return read_frame(paths.MERGED_CSV)
