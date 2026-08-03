@@ -1,6 +1,22 @@
+"""Split settings, tuned hyper-parameters, and the search spaces they came from.
+
+The per-model constants below (``R_ALPHA``, the ``XGBoost`` block, ...) are not
+hand-picked: they are the best values found by
+``pipelines.training.search_hyperparameters``, which samples from
+``param_spaces`` at the bottom of this file. To reproduce or re-tune them::
+
+    from nyc_taxi.pipelines.training import search_hyperparameters
+    from nyc_taxi.pipelines.preprocessing import build_preprocessor
+    search = search_hyperparameters("XGBoost", build_preprocessor(),
+                                    x_train, y_train, n_iter=50, save=True)
+
+``save=True`` writes the winning parameters and estimator to ``artifacts/``.
+Keeping the spaces next to the results is what makes the numbers auditable
+rather than magic.
+"""
 from __future__ import annotations
 
-from scipy.stats import uniform, randint
+from scipy.stats import randint, uniform
 
 # global settings -----------------------------------------------------------
 

@@ -1,3 +1,13 @@
+"""Unit conversion, cleaning and ordinal classification of weather data.
+
+The raw Wunderground feed is imperial, irregularly sampled, and describes sky
+state as free text. This module converts to metric, resolves trace
+precipitation markers, aggregates to an hourly grid, and maps both numeric
+measurements and the free-text ``conditions`` onto ordinal classes with paired
+``*_class`` (label) and ``*_code`` (integer) columns.
+
+See ``notebooks/weather.ipynb`` for the known limits of the source data.
+"""
 from __future__ import annotations
 
 from typing import Any
@@ -5,13 +15,16 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-import nyc_taxi.config.weather_constants as weather_constants
+from nyc_taxi.config import weather_constants
+
 # Re-exported: these moved to the constants layer to break a circular import,
 # but the weather notebook imports them from here. The redundant ``as`` form
 # is the conventional way to mark a deliberate re-export (PEP 484), and unlike
 # an ``__all__`` entry it does not narrow this module's public surface — an
 # ``__all__`` here made every other import from this module look undeclared.
-from nyc_taxi.config.weather_constants import OrdinalScale as OrdinalScale
+from nyc_taxi.config.weather_constants import (
+  OrdinalScale as OrdinalScale,  # noqa: PLC0414
+)
 
 
 def fahrenheit_to_celsius(df, col, new_col):
@@ -35,6 +48,7 @@ def inch_mercury_to_hpa(df, col, new_col):
 
 
 def clean_trace_and_convert(df, cols, val, trace='T'):
+  """Replace the trace marker ('T') with *val*, then coerce to numeric."""
   for col in cols:
     df[col] = df[col].replace(trace, val)
     df[col] = pd.to_numeric(df[col], errors='coerce')
@@ -42,6 +56,7 @@ def clean_trace_and_convert(df, cols, val, trace='T'):
 
 
 def split_precip_into_rain_and_snow(df):
+  """Split precip_mm into rain_mm / snow_mm using the free-text conditions."""
   df = df.copy()
   df['rain_mm'] = df['precip_mm'].where(
       df['conditions'].str.contains('Rain', na=False), 0)
@@ -74,33 +89,6 @@ def classify_and_code(
   df[code_col] = _cat_codes(df[cls_col])
 
 
-def classify_temp(df: pd.DataFrame) -> None:
-  classify_and_code(df, "temp_c", weather_constants.TEMP_SCALE, "temp")
-
-
-def classify_windspeed(df: pd.DataFrame) -> None:
-  classify_and_code(df, "windspeed_kph", weather_constants.WIND_SCALE,
-                    "windspeed")
-
-
-def classify_humidity(df: pd.DataFrame) -> None:
-  classify_and_code(df, "humidity", weather_constants.HUMIDITY_SCALE,
-                    "humidity")
-
-
-def classify_pressure(df: pd.DataFrame) -> None:
-  classify_and_code(df, "pressure_hpa", weather_constants.PRESSURE_SCALE,
-                    "pressure")
-
-
-def classify_rain(df: pd.DataFrame) -> None:
-  classify_and_code(df, "rain_mm", weather_constants.RAIN_SCALE, "rain")
-
-
-def classify_snow(df: pd.DataFrame) -> None:
-  classify_and_code(df, "snow_mm", weather_constants.SNOW_SCALE, "snow")
-
-
 COND_TO_CLOUD = {
   "Clear": "clear",
   "Scattered Clouds": "scattered_clouds",
@@ -121,26 +109,14 @@ def classify_from_conditions(df: pd.DataFrame, dst_prefix: str,
 
   Shared by the cloud, haze and freezing classifiers, which previously
   existed as three copies of this body.
+
+  Note the lookup is on the exact string, so a label carrying trailing
+  whitespace falls through to *default* — see ``notebooks/weather.ipynb``
+  section 2.2.
   """
   cls_col = f"{dst_prefix}_class"
   df[cls_col] = df["conditions"].map(label_map).fillna(default)
   df[f"{dst_prefix}_code"] = df[cls_col].map(code_map)
-
-
-def classify_clouds(df):
-  classify_from_conditions(df, "cloud", COND_TO_CLOUD, "unknown",
-                           weather_constants.CLOUD_MAP)
-
-
-def classify_haze(df):
-  classify_from_conditions(df, "hazy", COND_TO_HAZE, "no_haze",
-                           weather_constants.HAZE_MAP)
-
-
-def classify_freezing(df):
-  classify_from_conditions(df, "freezing", COND_TO_FREEZING,
-                           "no_freezing_rain_fog",
-                           weather_constants.FREEZING_MAP)
 
 
 def classify_fog(df):
@@ -150,17 +126,30 @@ def classify_fog(df):
 
 
 def classify_weather_data(df):
+  """Add every ``*_class`` / ``*_code`` pair in one pass.
+
+  The order of the calls below fixes the column order of the processed
+  dataset, so changing it changes the output schema.
+
+  These were previously nine one-line wrapper functions (``classify_temp``,
+  ``classify_clouds``, ...), each a single call with fixed constants and none
+  used anywhere else. Inlining them puts what is classified, from which
+  column, onto one screen.
+  """
   df = df.copy()
-  classify_temp(df)
-  classify_windspeed(df)
-  classify_humidity(df)
+  wc = weather_constants
+
+  classify_and_code(df, "temp_c", wc.TEMP_SCALE, "temp")
+  classify_and_code(df, "windspeed_kph", wc.WIND_SCALE, "windspeed")
+  classify_and_code(df, "humidity", wc.HUMIDITY_SCALE, "humidity")
   classify_fog(df)
-  classify_freezing(df)
-  classify_clouds(df)
-  classify_haze(df)
-  classify_pressure(df)
-  classify_rain(df)
-  classify_snow(df)
+  classify_from_conditions(df, "freezing", COND_TO_FREEZING,
+                           "no_freezing_rain_fog", wc.FREEZING_MAP)
+  classify_from_conditions(df, "cloud", COND_TO_CLOUD, "unknown", wc.CLOUD_MAP)
+  classify_from_conditions(df, "hazy", COND_TO_HAZE, "no_haze", wc.HAZE_MAP)
+  classify_and_code(df, "pressure_hpa", wc.PRESSURE_SCALE, "pressure")
+  classify_and_code(df, "rain_mm", wc.RAIN_SCALE, "rain")
+  classify_and_code(df, "snow_mm", wc.SNOW_SCALE, "snow")
   return df
 
 
@@ -251,6 +240,10 @@ def clean_trace_values(
 
 
 def add_time_features(df, datetime_col):
+  """Floor *datetime_col* to the hour and derive the hour-based features.
+
+  ``hour_of_year`` produced here is the join key to the taxi data.
+  """
   df['datetime_hour'] = df[datetime_col].dt.floor('h')
   return _add_time_features_from_hour(df)
 

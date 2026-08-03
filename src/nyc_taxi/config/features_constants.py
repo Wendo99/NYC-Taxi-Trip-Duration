@@ -1,3 +1,17 @@
+"""Which columns the model sees, and which are deliberately withheld.
+
+``FEATURES`` is the allow-list: name -> (group, flag), where the group decides
+how ``build_preprocessor`` treats the column. ``NUM_ALL`` and ``CAT_ALL`` are
+derived from it, so adding a feature here is enough to wire it through.
+
+``DROPPED_FEATURES`` is the deny-list, and matters more than it looks. It holds
+raw identifiers, the target in its other units, and ``dropoff_datetime`` — from
+which ``trip_duration`` is exactly recoverable by subtraction (see
+``notebooks/taxi.ipynb``, section 2). Anything in it must never reach a model.
+
+``INVALID_COLS`` are the flags written by ``flag_and_clip``; rows with any of
+them set are excluded before training.
+"""
 TARGET = "trip_duration_log"
 
 FEATURES = {
@@ -105,15 +119,10 @@ INVALID_COLS = [
   "trip_duration_outlier"
 ]
 
-# Exclude utilities using keys from DROPPED_FEATURES.
-RES_TABLE_EXCLUDE_FEATURES = {
-  'route_distance_log_km': ("num", False),
-  "hav_dist_km_log": ("num", False),
-}
-
-GEO_PICK_HDB = ["pickup_cluster_hdb"]
-GEO_DROP_HDB = ["dropoff_cluster_hdb"]
-
+# One-hot encoded by build_preprocessor; the HDBSCAN variants
+# (pickup_cluster_hdb / dropoff_cluster_hdb) had equivalents here but nothing
+# referenced them — ENABLE_HDBC is off and MiniBatchKMeans supplies the
+# clusters the model actually uses.
 GEO_PICK = ["pickup_cluster"]
 GEO_DROP = ["dropoff_cluster"]
 
