@@ -37,7 +37,7 @@ def plot_passenger_counts(pc):
   # remove scientific notation and show thousands separators
   ax.ticklabel_format(style='plain', axis='y')  # disable 1e6 offset
   ax.yaxis.set_major_formatter(
-    mticker.StrMethodFormatter('{x:,.0f}'))  # e.g. 1,234,567
+      mticker.StrMethodFormatter('{x:,.0f}'))  # e.g. 1,234,567
   ax.yaxis.get_offset_text().set_visible(False)
 
   ax.set_xlabel("Number of Passengers per ride")
@@ -47,6 +47,7 @@ def plot_passenger_counts(pc):
   ax.grid(axis='y', alpha=0.3)
   plt.tight_layout()
   plt.show()
+
 
 def plot_geo_distr(pickup_lon, pickup_lat, dropoff_lon, dropoff_lat):
   plt.figure(figsize=(6, 6))
@@ -67,9 +68,9 @@ def plot_geo_distr(pickup_lon, pickup_lat, dropoff_lon, dropoff_lat):
 
 def plot_trips_month(df):
   if 'value' in df.columns:
-    monthly = df.set_index('pickup_datetime').resample('M')['value'].sum()
+    monthly = df.set_index('pickup_datetime').resample('ME')['value'].sum()
   else:
-    monthly = df.set_index('pickup_datetime').resample('M').size()
+    monthly = df.set_index('pickup_datetime').resample('ME').size()
 
   # plotting with improved labels, title size and date formatting
   fig, ax = plt.subplots(figsize=(10, 4))
@@ -86,7 +87,6 @@ def plot_trips_month(df):
   plt.xticks(rotation=45, ha='right', fontsize=10)
   plt.tight_layout()
   plt.show()
-
 
 def plot_trip_day(df):
   day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
@@ -156,4 +156,3 @@ def plot_trip_hour(df):
   # reserve extra top margin so annotations don't bump into the figure border
   plt.tight_layout(rect=[0, 0, 1, 0.94])
   plt.show()
-
