@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from sklearn.exceptions import NotFittedError
+from sklearn.utils.validation import check_is_fitted
 
 from nyc_taxi.config.path_file_constants import FIGURES_DIR
 
@@ -30,7 +31,7 @@ def unique_path(path) -> Path:
 
 
 def _resolve_figure_path(save_path) -> Path:
-  """Absolute paths are honoured; bare names land in ``figures/``."""
+  """Absolute paths are honored; bare names land in ``figures/``."""
   save_path = Path(save_path)
   if not save_path.is_absolute():
     save_path = FIGURES_DIR / save_path.name
@@ -74,27 +75,26 @@ def plot_boxplot(df, col: str) -> None:
   plt.show()
 
 
-def ensure_predictions_and_residuals(df_err, model, X, y, pred_col="y_pred",
+def ensure_predictions_and_residuals(df_err, model, x, y, pred_col="y_pred",
     resid_col="residual"):
   """Add prediction and residual columns to *df_err* if they are missing."""
   df = df_err.copy()
 
+  # check_is_fitted asks the estimator directly, so there is no throwaway
+  # predict call and no broad `except` swallowing unrelated failures.
   try:
-    model.predict(X.iloc[:1] if hasattr(X, "iloc") else X[:1])
+    check_is_fitted(model)
   except NotFittedError as exc:
     raise RuntimeError(
         "Model is not fitted. Fit it before computing predictions.") from exc
-  except Exception:
-    # Any other failure here is incidental; the real call below will surface it.
-    pass
 
   if pred_col not in df.columns:
-    preds = np.asarray(model.predict(X)).ravel()
-    df[pred_col] = pd.Series(preds, index=X.index)
+    preds = np.asarray(model.predict(x)).ravel()
+    df[pred_col] = pd.Series(preds, index=x.index)
 
   if resid_col not in df.columns:
     y_series = y.copy() if isinstance(y, pd.Series) else pd.Series(y,
-                                                                   index=X.index)
+                                                                   index=x.index)
     df[resid_col] = df[pred_col] - y_series
 
   return df

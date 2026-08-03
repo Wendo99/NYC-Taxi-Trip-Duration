@@ -10,7 +10,7 @@ from nyc_taxi.config import taxi_constants
 
 
 def _thousands_axis(ax) -> None:
-  """Format the y axis with thousands separators, no scientific offset."""
+  """Format the y-axis with thousands separators, no scientific offset."""
   ax.yaxis.set_major_formatter(mticker.StrMethodFormatter("{x:,.0f}"))
   ax.yaxis.get_offset_text().set_visible(False)
 
@@ -32,7 +32,7 @@ def _annotate_bars(ax, bars, values, headroom: float = 0.03,
 
 
 def plot_rides_date(pickup_counts, dropoff_counts):
-  fig, ax = plt.subplots(figsize=(12, 5))
+  _, ax = plt.subplots(figsize=(12, 5))
   pickup_counts.plot(ax=ax, label="Pick_ups", color='green', alpha=0.6)
   dropoff_counts.plot(ax=ax, label="Drop_offs", color='blue', alpha=0.6)
 
@@ -48,8 +48,8 @@ def plot_rides_date(pickup_counts, dropoff_counts):
 def plot_passenger_counts(pc):
   bins = np.arange(pc.min() - 0.5, pc.max() + 1.5, 1.0)
 
-  fig, ax = plt.subplots(figsize=(8, 5))
-  counts, edges, patches = ax.hist(pc, bins=bins, color='skyblue',
+  _, ax = plt.subplots(figsize=(8, 5))
+  counts, _, patches = ax.hist(pc, bins=bins, color='skyblue',
                                    edgecolor='black', alpha=0.8)
 
   ax.ticklabel_format(style='plain', axis='y')  # disable 1e6 offset
@@ -89,7 +89,7 @@ def plot_trips_month(df):
     monthly = df.set_index('pickup_datetime').resample('ME').size()
 
   # plotting with improved labels, title size and date formatting
-  fig, ax = plt.subplots(figsize=(10, 4))
+  _, ax = plt.subplots(figsize=(10, 4))
   ax.bar(monthly.index, monthly.values, width=20, align='center',
          color='skyblue', edgecolor='black', alpha=0.85)
   ax.set_ylim(0, monthly.max() * 1.15)
@@ -97,7 +97,7 @@ def plot_trips_month(df):
   ax.set_xlabel('Month', fontsize=14)
   ax.set_ylabel('Count', fontsize=14)
 
-  # format x axis for dates
+  # format x-axis for dates
   ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
   ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
   plt.xticks(rotation=45, ha='right', fontsize=10)
@@ -110,7 +110,7 @@ def plot_trip_day(df):
   dow = df['pickup_datetime'].dt.day_name()
   counts = dow.value_counts().reindex(day_order).fillna(0).astype(int)
 
-  fig, ax = plt.subplots(figsize=(9, 4))
+  _, ax = plt.subplots(figsize=(9, 4))
   bars = ax.bar(day_order, counts.values, color='skyblue', edgecolor='black',
                 alpha=0.85)
 
@@ -133,7 +133,7 @@ def plot_trip_hour(df):
                                         fill_value=0).sort_index().astype(int)
 
   # plot
-  fig, ax = plt.subplots(figsize=(10, 6))
+  _, ax = plt.subplots(figsize=(10, 6))
   bars = ax.bar(counts.index, counts.values, color='skyblue', edgecolor='black',
                 alpha=0.85)
 
@@ -153,5 +153,6 @@ def plot_trip_hour(df):
   ax.grid(axis='y', alpha=0.3)
 
   # reserve extra top margin so annotations don't bump into the figure border
-  plt.tight_layout(rect=[0, 0, 1, 0.94])
+  # (rect is (left, bottom, right, top) in figure coords — a tuple, not a list)
+  plt.tight_layout(rect=(0, 0, 1, 0.94))
   plt.show()
