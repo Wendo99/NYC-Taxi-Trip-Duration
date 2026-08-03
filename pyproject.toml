@@ -1,0 +1,25 @@
+[project]
+name = "nyc-taxi-trip-duration"
+version = "0.1.0"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "pandas>=2.2",
+    "numpy>=2.0",
+    "scipy>=1.13",
+    "scikit-learn>=1.5",
+    "joblib>=1.4",
+    "matplotlib>=3.9",
+    "seaborn>=0.13",
+    "folium>=0.17",
+    "shapely>=2.0",
+    "tqdm>=4.66",
+    "requests>=2.32",
+    "kaggle>=1.6",
+]
+
+[project.optional-dependencies]
+dev = ["jupyterlab", "ipykernel", "ruff", "pytest"]
+# Optional: the xgboost wheel does not bundle the OpenMP runtime, so on macOS
+# it additionally requires a system libomp (`brew install libomp`).
+# Every other model in models_factory.py runs without this extra.
+xgb = ["xgboost>=2.1"]
