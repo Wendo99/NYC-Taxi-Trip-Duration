@@ -5,7 +5,7 @@ yellow-cab records covering January–June 2016
 ([Kaggle competition](https://www.kaggle.com/c/nyc-taxi-trip-duration/overview)),
 enriched with hourly weather observations.
 
-Result: test RMSE 0.3288 on the log target, 54.6 % better than predicting
+Result: With XGBoost, test RMSE 0.3288 on the log target, 54.6 % better than predicting
 the mean, with an overfit gap of 0.0045.
 
 ---
@@ -16,10 +16,7 @@ Held-out test set of 288,397 trips, never seen during training or model
 selection. The target is `log1p(trip_duration)`, matching the competition's
 RMSLE metric, so every RMSE below is on that log scale.
 
-| | RMSE | vs. baseline |
-|---|---|---|
-| Baseline (predict the training mean) | 0.7247 | — |
-| **XGBoost, trained on all 1.15 M rows** | **0.3288** | **54.6 %** |
+**XGBoost, trained on all 1.15 M rows** | 0.3288 
 
 Model selection, 3-fold cross-validation on an identical 300,000-row
 subsample:
@@ -29,8 +26,6 @@ subsample:
 | **XGBoost** | **0.3404** | 0.0007 | 4 s |
 | RandomForest | 0.3450 | 0.0008 | 61 s |
 | LinearRegression | 0.4228 | 0.0008 | 1 s |
-| Ridge | 0.4228 | 0.0008 | 1 s |
-| BayesianRidge | 0.4228 | 0.0008 | 1 s |
 
 The train/test gap of 0.0045 is the number worth noting: on 1.15 M rows a
 gradient-boosted ensemble has ample capacity to memorise, and it has not.
@@ -45,11 +40,8 @@ swings six-fold between the 05:00 trough (15,002 trips) and the 18:00 peak
 (90,600).
 
 Which model predicts most reliably?
-XGBoost, on identical folds. The gap between the linear family (~0.42) and the
-tree models (~0.34) is the real finding: the relationship is not linear, and
-the interactions, distance × hour, cluster × weekday, are where the signal
-lives. The three linear models agree to four decimal places, so regularisation
-is doing nothing at this sample size.
+XGBoost, on identical folds. The gap between the linear model (~0.42) and the
+tree models (~0.34) was expected as the relationship is not linear.
 
 Does weather improve the forecast?
 Marginally. Removing all seven weather features costs 0.0013 RMSE, about
@@ -109,22 +101,10 @@ the same whether it runs from `notebooks/`, `src/` or the repository root.
 [uv](https://docs.astral.sh/uv/) manages the virtual environment, the Python
 version and the dependencies together.
 
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-On Windows, in PowerShell:
-
-```powershell
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-Homebrew users can run `brew install uv` instead.
-
 ### 2. Create the environment and install everything
 
 ```bash
-uv sync
+uv sync --extra xgb        # plus `brew install libomp` on macOS
 ```
 
 One command does all of it:
@@ -133,102 +113,41 @@ One command does all of it:
 - downloads Python 3.11 if it is not already present (the version is pinned in
   `.python-version`)
 - installs the exact versions from `uv.lock` — not "whatever PyPI ships today"
-- installs this project itself, so `import nyc_taxi` works everywhere without
-  setting `PYTHONPATH`
 
-No system libraries are required.
+#### Get Kaggle Credentials
+
+Kaggle credentials are needed only to download the raw data. Create a token at kaggle.com → Settings → API and save it to ~/.kaggle/access_token
 
 ### 3. Run things
 
-`uv run` uses `.venv` automatically, so **activation is optional**:
-
 ```bash
 uv run python -m nyc_taxi.main    # build every dataset
-uv run pytest                     # run the test suite
-uv run jupyter lab                # open the notebooks
 ```
+then run the notebooks manually starting with `taxi.ipynb` followed by `weather.ipynb` and `modelling.ipynb`
 
-If you would rather activate the environment and use plain `python`:
+
+#### Run Tests
+If you would like to run the tests you additionally need to sync uv again like:
 
 ```bash
-source .venv/bin/activate         # macOS / Linux
-.venv\Scripts\activate            # Windows
+uv sync --extra dev
 ```
-
-Then `python -m nyc_taxi.main`, `pytest`, and so on. `deactivate` exits.
-
-### Using an IDE
-
-Point the interpreter at `.venv/bin/python` (`.venv\Scripts\python.exe` on
-Windows). PyCharm and VS Code both detect `.venv/` in the project root
-automatically. Because the project is installed into the environment, no
-"Sources Root" marking or `PYTHONPATH` entry is needed.
-
-### Without uv
-
-`uv.lock` can be exported for plain pip:
+and then run the test suite:
 
 ```bash
-uv export --format requirements-txt --no-hashes > requirements.txt
-
-python3.11 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+uv run pytest
 ```
-
-The export begins with `-e .`, so that last command installs the project
-itself along with its 59 pinned dependencies — no separate step needed.
-
-### Optional extras
-
-XGBoost is an optional dependency, because its wheel does not bundle the
-OpenMP runtime it needs:
-
-```bash
-uv sync --extra xgb        # plus `brew install libomp` on macOS
-```
-
-Without it the other four models still run; `models_factory` raises a message
-saying exactly this rather than failing at import.
-
-Kaggle credentials are needed only to download the raw data. Create a
-token at *kaggle.com → Settings → API*, save it to `~/.kaggle/kaggle.json`, or
-export `KAGGLE_USERNAME` / `KAGGLE_KEY`. Nothing is read from this repository.
-
-OSRM, `distance_utilities.add_route_distance` calls a locally hosted
-routing server for true driven distance. It is disabled in the pipeline;
-the model uses straight-line haversine. Enabling it means running OSRM with an
-NYC extract on `localhost:5001`.
-
-## Engineering
-
-```bash
-uv run pytest          # 69 tests
-uv run ruff check src tests
-uv run mypy --ignore-missing-imports src
-```
-
-The test suite is mostly characterisation tests: they pin the exact
-columns, dtypes and values the feature pipeline produces, so a refactor that
-changes behaviour fails immediately rather than silently shifting a metric.
-There is also a guard that imports every module in its own subprocess, because
-a circular import only surfaces when the wrong module is imported first.
 
 ## Known limitations
 
 - No routed distance. Haversine understates real travel distance; OSRM is
-  the most obvious avenue for improvement.
+  the most obvious route for improvement. 
 - Model selection used a 300 k subsample. The ranking is fair, every model
   saw identical folds, but the absolute CV figures are slightly pessimistic
   against the full-data result.
 - Hyper-parameters are fixed, taken from an earlier randomised search
   (reproducible via `search_hyperparameters`; the spaces live in
   `config/modell_constants.py`) rather than re-tuned.
-- This is a random split of the competition's training file, not Kaggle's
-  holdout, so the score is not directly leaderboard-comparable.
-- 55 rows lose sky-cover information to trailing whitespace and unmapped
-  labels in `conditions`, quantified in `weather.ipynb`, left unfixed as it
-  cannot move the metric.
 
 ---
 

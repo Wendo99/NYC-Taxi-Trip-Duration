@@ -1453,6 +1453,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "folium" },
+    { name = "ipykernel" },
     { name = "joblib" },
     { name = "kaggle" },
     { name = "matplotlib" },
@@ -1486,6 +1487,7 @@ xgb = [
 [package.metadata]
 requires-dist = [
     { name = "folium", specifier = ">=0.17" },
+    { name = "ipykernel", specifier = ">=7.3.0" },
     { name = "ipykernel", marker = "extra == 'dev'" },
     { name = "joblib", specifier = ">=1.4" },
     { name = "jupyterlab", marker = "extra == 'dev'" },
