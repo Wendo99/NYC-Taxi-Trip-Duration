@@ -9,6 +9,7 @@ row count stays stable and the flag itself is available as a signal.
 yields a feature that is silently always zero, which is exactly what happened
 to LaGuardia before its latitudes were corrected.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -17,9 +18,8 @@ from typing import ClassVar
 # String Const. ----------------------------------------------------------------
 TIME_REF_COL = "pickup_datetime"
 
-PICKUP_COORDS = ['pickup_latitude',
-                 'pickup_longitude']
-DROPOFF_COORDS = ['dropoff_latitude', 'dropoff_longitude']
+PICKUP_COORDS = ["pickup_latitude", "pickup_longitude"]
+DROPOFF_COORDS = ["dropoff_latitude", "dropoff_longitude"]
 
 # Mini-Batch K-Means Cluster ---------------------------------------------------
 ENABLE_MB = True
@@ -53,8 +53,9 @@ AIRPORT_BOXES = {
 for _name, (_lon, _lat) in AIRPORT_BOXES.items():
   if _lon[0] >= _lon[1] or _lat[0] >= _lat[1]:
     raise ValueError(
-        f"{_name}: bounding box must be (min, max) per axis, got "
-        f"lon={_lon}, lat={_lat}")
+      f"{_name}: bounding box must be (min, max) per axis, got "
+      f"lon={_lon}, lat={_lat}"
+    )
 
 
 # ------------------------------------------------------------
@@ -77,6 +78,8 @@ class GeoBounds:
   min_lat: float = 40.59
   max_lat: float = 40.90
   cols: ClassVar[list[str]] = [
-    "pickup_longitude", "pickup_latitude",
-    "dropoff_longitude", "dropoff_latitude",
+    "pickup_longitude",
+    "pickup_latitude",
+    "dropoff_longitude",
+    "dropoff_latitude",
   ]

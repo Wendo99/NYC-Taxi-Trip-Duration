@@ -1,4 +1,5 @@
 """Tests for the feature-importance helpers in pipelines.training."""
+
 from __future__ import annotations
 
 import json
@@ -8,7 +9,7 @@ import pandas as pd
 import pytest
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import Ridge
+from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
@@ -16,7 +17,6 @@ from nyc_taxi.pipelines import training as training_module
 from nyc_taxi.pipelines.training import (
   get_feature_names_safe,
   importance_table,
-  search_hyperparameters,
   top_generic_features,
   top_linreg_features,
   top_tree_features,
@@ -29,51 +29,63 @@ Dataset = tuple[pd.DataFrame, pd.Series]
 def data() -> Dataset:
   """Two informative-ish numeric columns, one categorical, target driven by 'a'."""
   rng = np.random.default_rng(0)
-  x = pd.DataFrame({"a": rng.normal(size=200), "b": rng.normal(size=200),
-                    "c": rng.choice(list("xyz"), 200)})
+  x = pd.DataFrame(
+    {
+      "a": rng.normal(size=200),
+      "b": rng.normal(size=200),
+      "c": rng.choice(list("xyz"), 200),
+    }
+  )
   y = pd.Series(x["a"] * 2 + rng.normal(scale=0.1, size=200))
   return x, y
 
 
 @pytest.fixture(scope="module")
 def preprocessor() -> ColumnTransformer:
-  return ColumnTransformer([
-    ("nums", StandardScaler(), ["a", "b"]),
-    ("geo", OneHotEncoder(sparse_output=False), ["c"]),
-  ])
+  return ColumnTransformer(
+    [
+      ("nums", StandardScaler(), ["a", "b"]),
+      ("geo", OneHotEncoder(sparse_output=False), ["c"]),
+    ]
+  )
 
 
 @pytest.fixture(scope="module")
-def ridge_pipe(data: Dataset, preprocessor: ColumnTransformer) -> object:
+def linreg_pipe(data: Dataset, preprocessor: ColumnTransformer) -> object:
   x, y = data
-  return Pipeline([("preprocessor", preprocessor), ("model", Ridge())]).fit(x, y)
+  return Pipeline(
+    [("preprocessor", preprocessor), ("model", LinearRegression())]
+  ).fit(x, y)
 
 
 @pytest.fixture(scope="module")
 def forest_pipe(data: Dataset, preprocessor: ColumnTransformer) -> object:
   x, y = data
-  return Pipeline([
-    ("preprocessor", preprocessor),
-    ("model", RandomForestRegressor(n_estimators=10, random_state=0)),
-  ]).fit(x, y)
+  return Pipeline(
+    [
+      ("preprocessor", preprocessor),
+      ("model", RandomForestRegressor(n_estimators=10, random_state=0)),
+    ]
+  ).fit(x, y)
 
 
 # ------------------------------------------------------------ feature names
-def test_feature_names_strip_transformer_prefix(ridge_pipe: Pipeline):
+def test_feature_names_strip_transformer_prefix(linreg_pipe: Pipeline):
   """sklearn emits 'nums__a'; the importance tables want a bare 'a'.
 
   Guards the rewrite that replaced a hand-rolled walk over the private
   ``ColumnTransformer._iter`` with the public ``get_feature_names_out``.
   """
-  names = get_feature_names_safe(ridge_pipe.named_steps["preprocessor"])
+  names = get_feature_names_safe(linreg_pipe.named_steps["preprocessor"])
   assert [str(n) for n in names] == ["a", "b", "c_x", "c_y", "c_z"]
 
 
-def test_feature_names_match_transformed_width(ridge_pipe: Pipeline,
-    data: Dataset):
+def test_feature_names_match_transformed_width(
+  linreg_pipe: Pipeline, data: Dataset
+):
   """One name per output column, or the importance mapping is misaligned."""
   x, _ = data
-  pre = ridge_pipe.named_steps["preprocessor"]
+  pre = linreg_pipe.named_steps["preprocessor"]
   assert len(get_feature_names_safe(pre)) == pre.transform(x).shape[1]
 
 
@@ -99,7 +111,7 @@ def test_importance_table_respects_top_n():
 def test_importance_percentages_are_shares_of_all_features():
   """rel_importance must not depend on how many rows are displayed.
 
-  Normalising over the displayed subset made the same feature read a different
+  Normalizing over the displayed subset made the same feature read a different
   percentage at different top_n, and forced cum_importance to 100 % regardless
   of how much of the model the table actually covered.
   """
@@ -115,36 +127,44 @@ def test_importance_percentages_are_shares_of_all_features():
 
 
 # ------------------------------------------------------------ top_* rankings
-def test_top_linreg_ranks_the_informative_feature_first(ridge_pipe: Pipeline,
-    data: Dataset):
+def test_top_linreg_ranks_the_informative_feature_first(
+  linreg_pipe: Pipeline, data: Dataset
+):
   x, _ = data
-  df = top_linreg_features(ridge_pipe, x, top_n=3)
+  df = top_linreg_features(linreg_pipe, x, top_n=3)
   assert df.loc[0, "feature"] == "a"
   assert "abs_coef" in df.columns
 
 
-def test_top_tree_ranks_the_informative_feature_first(forest_pipe: Pipeline,
-    data: Dataset):
+def test_top_tree_ranks_the_informative_feature_first(
+  forest_pipe: Pipeline, data: Dataset
+):
   x, _ = data
   df = top_tree_features(forest_pipe, x, top_n=3)
   assert df.loc[0, "feature"] == "a"
 
 
-def test_top_tree_returns_a_dataframe_of_top_n_rows(forest_pipe: Pipeline,
-    data: Dataset):
+def test_top_tree_returns_a_dataframe_of_top_n_rows(
+  forest_pipe: Pipeline, data: Dataset
+):
   """The return type no longer varies with an argument value."""
   x, _ = data
   df = top_tree_features(forest_pipe, x, top_n=2)
   assert isinstance(df, pd.DataFrame)
   assert len(df) == 2
   assert list(df.columns) == [
-    "feature", "importance", "rel_importance", "cum_importance"]
+    "feature",
+    "importance",
+    "rel_importance",
+    "cum_importance",
+  ]
 
 
-def test_top_generic_uses_coef_path_for_linear_models(ridge_pipe: Pipeline,
-    data: Dataset):
+def test_top_generic_uses_coef_path_for_linear_models(
+  linreg_pipe: Pipeline, data: Dataset
+):
   x, y = data
-  df = top_generic_features(ridge_pipe, x, y, top_n=3)
+  df = top_generic_features(linreg_pipe, x, y, top_n=3)
   assert "abs_coef" in df.columns  # not the permutation fallback
   assert df.loc[0, "feature"] == "a"
 
@@ -153,46 +173,54 @@ def test_top_generic_uses_coef_path_for_linear_models(ridge_pipe: Pipeline,
 def test_require_pipeline_rejects_a_bare_estimator(data: Dataset):
   x, _ = data
   # Built outside the block so only one call inside it can raise; otherwise a
-  # TypeError from Ridge() itself would pass the test (sonar python:S5778).
-  bare_estimator = Ridge()
+  # TypeError from Linreg() itself would pass the test (sonar python:S5778).
+  bare_estimator = LinearRegression()
   with pytest.raises(TypeError, match="must be a sklearn Pipeline"):
     top_linreg_features(bare_estimator, x)
 
 
-def test_require_pipeline_rejects_a_wrongly_named_step(data: Dataset,
-    preprocessor: ColumnTransformer):
+def test_require_pipeline_rejects_a_wrongly_named_step(
+  data: Dataset, preprocessor: ColumnTransformer
+):
   x, y = data
-  wrong = Pipeline([("preprocessor", preprocessor),
-                    ("modell", Ridge())]).fit(x, y)
+  wrong = Pipeline(
+    [("preprocessor", preprocessor), ("wrong_step_name", LinearRegression())]
+  ).fit(x, y)
   with pytest.raises(ValueError, match="no step named"):
     top_linreg_features(wrong, x)
 
 
 # ------------------------------------------------- hyper-parameter search
-def test_search_hyperparameters_returns_a_fitted_search(data, preprocessor,
-    tmp_path, monkeypatch):
-  """The tuned constants in modell_constants came from this function.
+def test_search_hyperparameters_returns_a_fitted_search(data, preprocessor):
+  """The tuned constants in model_constants came from this function.
 
-  It has no caller in the notebooks any more, so this test is what keeps it
+  It has no caller in the notebooks anymore, so this test is what keeps it
   honest: the search space in `param_spaces` must still line up with the step
   names `build_model` produces, or the constants become unreproducible.
   """
   x, y = data
-  search = search_hyperparameters("Ridge", preprocessor, x, y, n_iter=2)
+  search = training_module.search_hyperparameters(
+    "RandomForest", preprocessor, x, y, n_iter=2
+  )
 
   assert hasattr(search, "best_params_")
-  assert "model__alpha" in search.best_params_  # matches param_spaces["Ridge"]
+  assert (
+    "model__n_estimators" in search.best_params_
+  )  # matches param_spaces["RandomForest"]
   assert search.best_score_ <= 0  # neg_root_mean_squared_error
 
 
-def test_search_hyperparameters_can_persist_its_result(data, preprocessor,
-    tmp_path, monkeypatch):
+def test_search_hyperparameters_can_persist_its_result(
+  data, preprocessor, tmp_path, monkeypatch
+):
   """save=True writes the winning params and estimator to artifacts/."""
   monkeypatch.setattr(training_module, "ARTIFACTS_DIR", tmp_path)
   x, y = data
-  search_hyperparameters("Ridge", preprocessor, x, y, n_iter=2, save=True)
+  training_module.search_hyperparameters(
+    "RandomForest", preprocessor, x, y, n_iter=2, save=True
+  )
 
-  params = tmp_path / "Ridge_best_params.json"
+  params = tmp_path / "RandomForest_best_params.json"
   assert params.is_file()
-  assert "model__alpha" in json.loads(params.read_text())
-  assert (tmp_path / "Ridge_model.joblib").is_file()
+  assert "model__n_estimators" in json.loads(params.read_text())
+  assert (tmp_path / "RandomForest_model.joblib").is_file()

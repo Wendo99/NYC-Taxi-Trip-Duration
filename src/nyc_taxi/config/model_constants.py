@@ -1,4 +1,4 @@
-"""Split settings, tuned hyper-parameters, and the search spaces they came from.
+"""Split settings, tuned hyperparameters, and the search spaces they came from.
 
 The per-model constants below (``R_ALPHA``, the ``XGBoost`` block, ...) are not
 hand-picked: they are the best values found by
@@ -14,6 +14,7 @@ hand-picked: they are the best values found by
 Keeping the spaces next to the results is what makes the numbers auditable
 rather than magic.
 """
+
 from __future__ import annotations
 
 from scipy.stats import randint, uniform
@@ -28,10 +29,6 @@ TEST_SIZE = 0.20
 
 # general  ---------------------------------------------------
 N_JOBS = -1
-
-# Ridge ---------------------------------------------------
-
-R_ALPHA = 1.3110318597055903
 
 # Random Forest ---------------------------------------------------
 
@@ -52,12 +49,7 @@ X_N_ESTIMATORS = 187
 # ---------------------------------------------------
 
 param_spaces = {
-  "LinearRegression": {
-
-  },
-  "Ridge": {
-    "model__alpha": uniform(0.01, 20.0),
-  },
+  "LinearRegression": {},
   "RandomForest": {
     "model__n_estimators": randint(50, 150),
   },
@@ -72,8 +64,4 @@ param_spaces = {
     "model__reg_alpha": uniform(0, 3),
     "model__reg_lambda": uniform(0, 1),
   },
-  "Bayes": {
-    "model__alpha_1": uniform(1e-6, 1e-4),
-    "model__lambda_1": uniform(1e-6, 1e-4)
-  }
 }

@@ -4,6 +4,7 @@ All paths are absolute, derived from this file's own location, so the code
 behaves identically whether it is run from ``notebooks/``, ``src/`` or the
 repository root. Nothing here should ever be a relative literal.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -22,8 +23,9 @@ def _find_project_root(start: Path) -> Path:
     if (candidate / _ROOT_MARKER).is_file():
       return candidate
   raise RuntimeError(
-      f"could not locate {_ROOT_MARKER} above {start}; "
-      "the project layout is not what path_file_constants expects")
+    f"could not locate {_ROOT_MARKER} above {start}; "
+    "the project layout is not what path_file_constants expects"
+  )
 
 
 PROJECT_ROOT = _find_project_root(Path(__file__).resolve())
@@ -66,8 +68,14 @@ WEATHER_PROCESSED_CSV = PROCESSED_DIR / "weather_clean.csv"
 MERGED_CSV = PROCESSED_DIR / "taxi_weather.csv"
 
 _MANAGED_DIRS = (
-  RAW_DIR, PROCESSED_DIR, ZIP_DIR, CACHE_DIR, DERIVED_DIR,
-  MODELS_DIR, FIGURES_DIR, ARTIFACTS_DIR,
+  RAW_DIR,
+  PROCESSED_DIR,
+  ZIP_DIR,
+  CACHE_DIR,
+  DERIVED_DIR,
+  MODELS_DIR,
+  FIGURES_DIR,
+  ARTIFACTS_DIR,
 )
 
 for _p in _MANAGED_DIRS:

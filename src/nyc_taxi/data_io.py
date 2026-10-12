@@ -8,6 +8,7 @@ Kaggle credentials are never read from this repository. ``api.authenticate()``
 picks them up from ``~/.kaggle/kaggle.json`` or the ``KAGGLE_USERNAME`` /
 ``KAGGLE_KEY`` environment variables.
 """
+
 from __future__ import annotations
 
 import logging
@@ -73,7 +74,8 @@ def extract_csv_from_zip(zip_path: Path, csv_name: str, target_dir: Path):
       matches = [n for n in names if Path(n).name == csv_name]
       if not matches:
         raise KeyError(
-            f"{csv_name!r} not found in archive. Contains: {names[:5]} …")
+          f"{csv_name!r} not found in archive. Contains: {names[:5]} …"
+        )
       member = matches[0]
 
     zf.extract(member, path=target_dir)
@@ -93,8 +95,9 @@ def extract_csv_from_inner_zips(data_dir, extracted_dir):
               dst.write(src.read())
 
 
-def _load_with_cache(pkl_path: Path, csv_path: Path,
-    fetch: Callable[[], None]) -> pd.DataFrame:
+def _load_with_cache(
+  pkl_path: Path, csv_path: Path, fetch: Callable[[], None]
+) -> pd.DataFrame:
   """Return the cached frame, else run *fetch*, read *csv_path* and cache it.
 
   *fetch* is responsible for making ``csv_path`` exist; it is skipped entirely
@@ -125,10 +128,13 @@ def load_taxi_data() -> pd.DataFrame:
   def fetch() -> None:
     if not paths.TAXI_RAW_ZIP.is_file():
       download_kaggle_competition(
-          _authenticated_api(), "nyc-taxi-trip-duration", paths.ZIP_DIR)
+        _authenticated_api(), "nyc-taxi-trip-duration", paths.ZIP_DIR
+      )
     extract_inner_zips(
-        paths.TAXI_RAW_ZIP, paths.ZIP_DIR,
-        {"train.zip", "test.zip", "sample_submission.zip"})
+      paths.TAXI_RAW_ZIP,
+      paths.ZIP_DIR,
+      {"train.zip", "test.zip", "sample_submission.zip"},
+    )
     extract_csv_from_inner_zips(paths.ZIP_DIR, paths.RAW_DIR)
 
   return _load_with_cache(paths.TAXI_CACHE_PICKLE, paths.TAXI_RAW_CSV, fetch)
@@ -141,16 +147,20 @@ def load_weather_data() -> pd.DataFrame:
   def fetch() -> None:
     if not paths.WEATHER_RAW_ZIP.is_file():
       download_kaggle_dataset(
-          _authenticated_api(), "pschale/nyc-taxi-wunderground-weather",
-          paths.ZIP_DIR)
+        _authenticated_api(),
+        "pschale/nyc-taxi-wunderground-weather",
+        paths.ZIP_DIR,
+      )
       log.info("Weather ZIP downloaded.")
     if not paths.WEATHER_RAW_CSV1.is_file():
       extract_csv_from_zip(
-          paths.WEATHER_RAW_ZIP, paths.WEATHER_RAW_CSV1.name, paths.RAW_DIR)
+        paths.WEATHER_RAW_ZIP, paths.WEATHER_RAW_CSV1.name, paths.RAW_DIR
+      )
       log.info("Weather CSV extracted.")
 
   return _load_with_cache(
-      paths.WEATHER_CACHE_PICKLE, paths.WEATHER_RAW_CSV1, fetch)
+    paths.WEATHER_CACHE_PICKLE, paths.WEATHER_RAW_CSV1, fetch
+  )
 
 
 def load_taxi_weather_data(recompute: bool = False) -> pd.DataFrame:
