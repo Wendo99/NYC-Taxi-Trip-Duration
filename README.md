@@ -16,7 +16,10 @@ Held-out test set of 288,397 trips, never seen during training or model
 selection. The target is `log1p(trip_duration)`, matching the competition's
 RMSLE metric, so every RMSE below is on that log scale.
 
-**XGBoost, trained on all 1.15 M rows** | 0.3288 
+| | RMSE | vs. baseline |
+|---|---|---|
+| Baseline (predict the training mean) | 0.7247 | — |
+| **XGBoost, trained on all 1.15 M rows** | **0.3288** | **54.6 %** |
 
 Model selection, 3-fold cross-validation on an identical 300,000-row
 subsample:
