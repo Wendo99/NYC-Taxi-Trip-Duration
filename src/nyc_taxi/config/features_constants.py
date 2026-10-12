@@ -12,43 +12,37 @@ which ``trip_duration`` is exactly recoverable by subtraction (see
 ``INVALID_COLS`` are the flags written by ``flag_and_clip``; rows with any of
 them set are excluded before training.
 """
+
 TARGET = "trip_duration_log"
 
 FEATURES = {
   # --- NUMERIC
   "hav_dist_km_log": ("num", False),
-
   # --- CATEGORICAL
   "is_rush_am": ("cat", False),
   "is_rush_pm": ("cat", False),
   "is_night": ("cat", False),
-  'is_early_morning': ("cat", False),
+  "is_early_morning": ("cat", False),
   "is_holiday": ("cat", False),
   "pickup_weekday": ("cat", False),
   "vendor_id": ("cat", False),
-
-  'is_jfk_drop': ("cat", False),
+  "is_jfk_drop": ("cat", False),
   "pickup_month": ("cat", False),
   "passenger_count": ("num", False),
   "temp_code": ("cat", True),
-
   "temp_c": ("num", True),
-
   "pressure_code": ("cat", True),
   "hour_of_day": ("cat", False),
   "rain": ("cat", True),
-
   "dropoff_longitude": ("num", False),
   "dropoff_latitude": ("num", False),
   "pickup_longitude": ("num", False),
   "pickup_latitude": ("num", False),
-
-  'daily_precip_mm': ("num", False),
-  'pickup_cluster': ("geo", False),
-  'dropoff_cluster': ("geo", False),
+  "daily_precip_mm": ("num", False),
+  "pickup_cluster": ("geo", False),
+  "dropoff_cluster": ("geo", False),
   "snow_weekend": ("cat", True),
   "humidity": ("num", True),
-
 }
 
 DROPPED_FEATURES = {
@@ -61,7 +55,7 @@ DROPPED_FEATURES = {
   "rain_mm": ("num", True),
   "pressure_hpa": ("num", True),
   "cloud_code": ("cat", True),
-  'daily_snow_mm': ("num", False),
+  "daily_snow_mm": ("num", False),
   "snow_code": ("cat", True),
   "windspeed_kph_sqrt": ("num", True),
   "snow_mm": ("num", True),
@@ -76,20 +70,18 @@ DROPPED_FEATURES = {
   "conditions": ("cat", True),
   "pickup_datetime": ("cat", False),
   "dropoff_datetime": ("cat", False),
-  'is_laguardia_drop': ("cat", False),
-  'is_laguardia_pick': ("cat", False),
+  "is_laguardia_drop": ("cat", False),
+  "is_laguardia_pick": ("cat", False),
   "freezing_code": ("cat", True),
   "is_group_trip": ("cat", False),
   "is_weekend": ("cat", False),
   "datetime": ("cat", False),
   "datetime_hour": ("cat", False),
   "pickup_hour": ("cat", False),
-
   "rain_rush_pm": ("cat", False),
   "store_and_fwd_flag_bin": ("cat", False),
   "fog": ("cat", True),
-  'fog_code': ("cat", True),
-
+  "fog_code": ("cat", True),
   "temp_class": ("cat", True),
   "windspeed_class": ("cat", True),
   "humidity_class": ("cat", True),
@@ -106,8 +98,8 @@ DROPPED_FEATURES = {
   "store_and_fwd_flag": ("cat", False),
   "id": ("cat", False),
   "hav_dist_km": ("num", False),
-  'route_distance_km': ("num", False),
-  'route_distance_log_km': ("num", False)
+  "route_distance_km": ("num", False),
+  "route_distance_log_km": ("num", False),
 }
 
 INVALID_COLS = [
@@ -116,7 +108,7 @@ INVALID_COLS = [
   "dropoff_longitude_invalid",
   "dropoff_latitude_invalid",
   "passenger_count_invalid",
-  "trip_duration_outlier"
+  "trip_duration_outlier",
 ]
 
 # One-hot encoded by build_preprocessor; the HDBSCAN variants

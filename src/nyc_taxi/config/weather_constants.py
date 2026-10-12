@@ -6,6 +6,7 @@ at import time. Defining them in utilities made constants depend on
 utilities — a cycle that was previously worked around by importing
 ``weather_constants`` inside ten separate function bodies.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -38,11 +39,13 @@ class OrdinalScale:
     return self.labels[-1]
 
 
-def make_map(labels: Sequence[str], *, unknown_code: int | None = None,
-    start: int = 0) -> dict[str, int]:
+def make_map(
+  labels: Sequence[str], *, unknown_code: int | None = None, start: int = 0
+) -> dict[str, int]:
   """Return a ``label -> ordinal_code`` mapping, plus optional 'unknown'."""
-  mapping: dict[str, int] = {lbl: i
-                             for i, lbl in enumerate(labels, start=start)}
+  mapping: dict[str, int] = {
+    lbl: i for i, lbl in enumerate(labels, start=start)
+  }
   if unknown_code is not None:
     mapping["unknown"] = unknown_code
   return mapping
@@ -82,60 +85,75 @@ def _make_map(labels, unknown_code=None):
 
 
 TEMP_SCALE = _ordinal_scale(
-    thresholds=(-10, 0, 10, 20, 30),
-    labels=("very_cold", "cold", "cool", "mild", "warm", "hot"),
+  thresholds=(-10, 0, 10, 20, 30),
+  labels=("very_cold", "cold", "cool", "mild", "warm", "hot"),
 )
 
 # wind speed kph -------------------------------------------------------------
 WIND_SCALE = _ordinal_scale(
-    thresholds=(5, 10, 20, 30, 40, 50, 65, 75, 90, 105, 120),
-    labels=(
-      "calm",
-      "light_air",
-      "light_breeze",
-      "light_wind",
-      "moderate_wind",
-      "fresh_wind",
-      "strong_wind",
-      "stiff_wind",
-      "stormy_wind",
-      "storm",
-      "heavy_storm",
-      "hurricane_like_storm",
-      "hurricane",
-    ),
+  thresholds=(5, 10, 20, 30, 40, 50, 65, 75, 90, 105, 120),
+  labels=(
+    "calm",
+    "light_air",
+    "light_breeze",
+    "light_wind",
+    "moderate_wind",
+    "fresh_wind",
+    "strong_wind",
+    "stiff_wind",
+    "stormy_wind",
+    "storm",
+    "heavy_storm",
+    "hurricane_like_storm",
+    "hurricane",
+  ),
 )
 
 #  humidity % --------------------------------------------------------
 HUMIDITY_SCALE = _ordinal_scale(
-    thresholds=(30, 50, 70, 85),
-    labels=("very_dry", "dry", "normal", "wet", "very_wet"),
+  thresholds=(30, 50, 70, 85),
+  labels=("very_dry", "dry", "normal", "wet", "very_wet"),
 )
 
 #  pressure hPa ------------------------------------------------------
 PRESSURE_SCALE = _ordinal_scale(
-    thresholds=(980, 1000, 1020, 1030),
-    labels=("very_low", "low", "normal", "high", "very_high"),
+  thresholds=(980, 1000, 1020, 1030),
+  labels=("very_low", "low", "normal", "high", "very_high"),
 )
 
 # rain mm / h --------------------------------------------------------
 RAIN_SCALE = _ordinal_scale(
-    thresholds=(0.5, 2.5, 7.6, 50),
-    labels=("no_rain", "light_rain", "moderate_rain", "heavy_rain",
-            "very_heavy_rain")
+  thresholds=(0.5, 2.5, 7.6, 50),
+  labels=(
+    "no_rain",
+    "light_rain",
+    "moderate_rain",
+    "heavy_rain",
+    "very_heavy_rain",
+  ),
 )
 
 # snow mm / h --------------------------------------------------------
 
 SNOW_SCALE = _ordinal_scale(
-    thresholds=(0.5, 1.0, 5.0, 10.0),
-    labels=("no_snow", "light_snow", "moderate_snow", "heavy_snow",
-            "very_heavy_snow"),
+  thresholds=(0.5, 1.0, 5.0, 10.0),
+  labels=(
+    "no_snow",
+    "light_snow",
+    "moderate_snow",
+    "heavy_snow",
+    "very_heavy_snow",
+  ),
 )
 
 # clouds
-CLOUD_LABELS = ("clear", "scattered_clouds", "partly_cloudy",
-                "mostly_cloudy", "overcast")
+CLOUD_LABELS = (
+  "clear",
+  "scattered_clouds",
+  "partly_cloudy",
+  "mostly_cloudy",
+  "overcast",
+)
 CLOUD_MAP = _make_map(CLOUD_LABELS, unknown_code=-1)
 
 # haze
@@ -143,9 +161,11 @@ HAZE_LABELS = ("no_haze", "haze")
 HAZE_MAP = _make_map(HAZE_LABELS)
 
 # freezing rain / fog
-FREEZING_LABELS = ("no_freezing_rain_fog",
-                   "light_freezing_rain",
-                   "light_freezing_fog")
+FREEZING_LABELS = (
+  "no_freezing_rain_fog",
+  "light_freezing_rain",
+  "light_freezing_fog",
+)
 FREEZING_MAP = _make_map(FREEZING_LABELS)
 
 # fog

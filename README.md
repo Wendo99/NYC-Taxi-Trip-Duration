@@ -1,6 +1,7 @@
 # NYC Taxi Trip Duration
 
-A coursework in 'Machine Learning' predicting how long a New York City taxi trip will take, from 1.46 million
+A coursework in 'Machine Learning' predicting how long a New York City taxi trip will take, from
+1.46 million
 yellow-cab records covering January–June 2016
 ([Kaggle competition](https://www.kaggle.com/c/nyc-taxi-trip-duration/overview)),
 enriched with hourly weather observations.
@@ -16,22 +17,22 @@ Held-out test set of 288,397 trips, never seen during training or model
 selection. The target is `log1p(trip_duration)`, matching the competition's
 RMSLE metric, so every RMSE below is on that log scale.
 
-| | RMSE | vs. baseline |
-|---|---|---|
-| Baseline (predict the training mean) | 0.7247 | — |
-| **XGBoost, trained on all 1.15 M rows** | **0.3288** | **54.6 %** |
+|                                         | RMSE       | vs. baseline |
+|-----------------------------------------|------------|--------------|
+| Baseline (predict the training mean)    | 0.7247     | —            |
+| **XGBoost, trained on all 1.15 M rows** | **0.3288** | **54.6 %**   |
 
 Model selection, 3-fold cross-validation on an identical 300,000-row
 subsample:
 
-| Model | CV RMSE | ± | Fit time |
-|---|---|---|---|
-| **XGBoost** | **0.3404** | 0.0007 | 4 s |
-| RandomForest | 0.3450 | 0.0008 | 61 s |
-| LinearRegression | 0.4228 | 0.0008 | 1 s |
+| Model            | CV RMSE    | ±      | Fit time |
+|------------------|------------|--------|----------|
+| **XGBoost**      | **0.3404** | 0.0007 | 4 s      |
+| RandomForest     | 0.3450     | 0.0008 | 61 s     |
+| LinearRegression | 0.4228     | 0.0008 | 1 s      |
 
 The train/test gap of 0.0045 is the number worth noting: on 1.15 M rows a
-gradient-boosted ensemble has ample capacity to memorise, and it has not.
+gradient-boosted ensemble has ample capacity to memorize, and it has not.
 
 ## The three questions this project set out to answer
 
@@ -39,8 +40,7 @@ Which characteristics matter most?
 Distance dominates, `hav_dist_km_log` alone accounts for 52.96 % of total
 model gain. Everything after that is time and place: pickup/dropoff clusters,
 `is_early_morning`, `hour_of_day`, `is_night`, `pickup_weekday`. Trip volume
-swings six-fold between the 05:00 trough (15,002 trips) and the 18:00 peak
-(90,600).
+swings six-fold between the 05:00 trough (15,002 trips) and the 18:00 peak (90,600).
 
 Which model predicts most reliably?
 XGBoost, on identical folds. The gap between the linear model (~0.42) and the
@@ -50,18 +50,18 @@ Does weather improve the forecast?
 Marginally. Removing all seven weather features costs 0.0013 RMSE, about
 0.38 %, or one to two cross-validation standard deviations. Real, consistent,
 and far smaller than the effort of building the join. Stated plainly because
-"we built it and it barely helped" is a result, not a failure.
+"we built it, and it barely helped" is a result, not a failure.
 
 ## Notebooks
 
 Read in this order. All three are committed with their outputs, so they render
 in full on GitHub without running anything.
 
-| Notebook | What it covers |
-|---|---|
-| [taxi.ipynb](notebooks/taxi.ipynb) | Raw trip data: why `dropoff_datetime` is excluded, four data-quality issues, why the target is log-transformed |
-| [weather.ipynb](notebooks/weather.ipynb) | Hourly weather: unit conversion, the trailing-whitespace defect in `conditions`, which extremes are clipping artefacts |
-| [modelling.ipynb](notebooks/modelling.ipynb) | Baseline, five-model comparison, the weather ablation, feature importance, residual analysis |
+| Notebook                                   | What it covers                                                                                                         |
+|--------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
+| [taxi.ipynb](notebooks/taxi.ipynb)         | Raw trip data: why `dropoff_datetime` is excluded, four data-quality issues, why the target is log-transformed         |
+| [weather.ipynb](notebooks/weather.ipynb)   | Hourly weather: unit conversion, the trailing-whitespace defect in `conditions`, which extremes are clipping artefacts |
+| [modeling.ipynb](notebooks/modeling.ipynb) | Baseline, model comparison, the weather ablation, feature importance, residual analysis                                |
 
 Two findings from the EDA that shaped everything downstream:
 
@@ -119,22 +119,26 @@ One command does all of it:
 
 #### Get Kaggle Credentials
 
-Kaggle credentials are needed only to download the raw data. Create a token at kaggle.com → Settings → API and save it to ~/.kaggle/access_token
+Kaggle credentials are needed only to download the raw data. Create a token at kaggle.com →
+Settings → API and save it to ~/.kaggle/access_token
 
 ### 3. Run things
 
 ```bash
 uv run python -m nyc_taxi.main    # build every dataset
 ```
-then run the notebooks manually starting with `taxi.ipynb` followed by `weather.ipynb` and `modelling.ipynb`
 
+then run the notebooks manually starting with `taxi.ipynb` followed by `weather.ipynb` and
+`modeling.ipynb`
 
 #### Run Tests
+
 If you would like to run the tests you additionally need to sync uv again like:
 
 ```bash
 uv sync --extra dev
 ```
+
 and then run the test suite:
 
 ```bash
@@ -144,13 +148,13 @@ uv run pytest
 ## Known limitations
 
 - No routed distance. Haversine understates real travel distance; OSRM is
-  the most obvious route for improvement. 
+  the most obvious route for improvement.
 - Model selection used a 300 k subsample. The ranking is fair, every model
   saw identical folds, but the absolute CV figures are slightly pessimistic
   against the full-data result.
-- Hyper-parameters are fixed, taken from an earlier randomised search
-  (reproducible via `search_hyperparameters`; the spaces live in
-  `config/modell_constants.py`) rather than re-tuned.
+- Hyperparameters are fixed, taken from an earlier randomized search (reproducible via
+  `search_hyperparameters`; the spaces live in
+  `config/model_constants.py`) rather than re-tuned.
 
 ---
 
@@ -164,16 +168,16 @@ uv run pytest
 `train.csv` holds 1,458,644 trips with no missing values, no duplicate ids and
 no duplicated rows.
 
-| Field | Meaning |
-|---|---|
-| `id` | unique trip identifier |
-| `vendor_id` | provider associated with the record |
-| `pickup_datetime` / `dropoff_datetime` | when the meter was engaged / disengaged |
-| `passenger_count` | passengers, driver-entered |
-| `pickup_longitude` / `pickup_latitude` | where the meter was engaged |
-| `dropoff_longitude` / `dropoff_latitude` | where the meter was disengaged |
-| `store_and_fwd_flag` | `Y` if the record was held in vehicle memory before transmission |
-| `trip_duration` | **target**, in seconds |
+| Field                                    | Meaning                                                          |
+|------------------------------------------|------------------------------------------------------------------|
+| `id`                                     | unique trip identifier                                           |
+| `vendor_id`                              | provider associated with the record                              |
+| `pickup_datetime` / `dropoff_datetime`   | when the meter was engaged / disengaged                          |
+| `passenger_count`                        | passengers, driver-entered                                       |
+| `pickup_longitude` / `pickup_latitude`   | where the meter was engaged                                      |
+| `dropoff_longitude` / `dropoff_latitude` | where the meter was disengaged                                   |
+| `store_and_fwd_flag`                     | `Y` if the record was held in vehicle memory before transmission |
+| `trip_duration`                          | **target**, in seconds                                           |
 
 ### Weather
 

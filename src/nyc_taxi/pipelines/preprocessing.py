@@ -1,4 +1,5 @@
 """Column casting helpers and the sklearn ColumnTransformer."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -50,23 +51,37 @@ def build_preprocessor() -> ColumnTransformer:
   cache would have to be invalidated by hand whenever the feature lists in
   ``features_constants`` change.
   """
-  num_pipe = Pipeline([
-    ("imputer", KNNImputer(missing_values=np.nan)),
-    ("scale", StandardScaler()),
-  ], memory=None)
+  num_pipe = Pipeline(
+    [
+      ("imputer", KNNImputer(missing_values=np.nan)),
+      ("scale", StandardScaler()),
+    ],
+    memory=None,
+  )
 
-  cat_pipe = Pipeline([
-    ("encoder",
-     OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)),
-  ], memory=None)
+  cat_pipe = Pipeline(
+    [
+      (
+        "encoder",
+        OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1),
+      ),
+    ],
+    memory=None,
+  )
 
-  geo_pipe = Pipeline([
-    ("onHot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
-  ], memory=None)
+  geo_pipe = Pipeline(
+    [
+      ("onHot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+    ],
+    memory=None,
+  )
 
-  return ColumnTransformer([
-    ("nums", num_pipe, NUM_ALL),
-    ("cats", cat_pipe, CAT_ALL),
-    ("geo_pick", geo_pipe, GEO_PICK),
-    ("geo_drop", geo_pipe, GEO_DROP),
-  ], remainder="drop")
+  return ColumnTransformer(
+    [
+      ("nums", num_pipe, NUM_ALL),
+      ("cats", cat_pipe, CAT_ALL),
+      ("geo_pick", geo_pipe, GEO_PICK),
+      ("geo_drop", geo_pipe, GEO_DROP),
+    ],
+    remainder="drop",
+  )

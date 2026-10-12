@@ -1,11 +1,12 @@
-"""Characterisation tests: pin current pipeline behaviour before refactoring.
+"""Characterisation tests: pin current pipeline behavior before refactoring.
 
 These are not specification tests. They record what the code *does today* so
-that a refactor which accidentally changes behaviour fails loudly. Where a
+that a refactor which accidentally changes behavior fails loudly. Where a
 value is pinned because of a known bug, it is marked with ``xfail`` rather
 than asserted as correct, so that fixing the bug turns the test green instead
 of red.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -21,45 +22,107 @@ from nyc_taxi.features import taxi_utilities as tu
 from nyc_taxi.features import weather_utilities as wu
 
 OUTLIER_SPEC = (
-  ("passenger_count", "passenger_count_invalid",
-   tc.PassengerLimits.min_passengers, tc.PassengerLimits.max_passengers),
-  ("pickup_longitude", "pickup_longitude_invalid",
-   tc.GeoBounds.min_lon, tc.GeoBounds.max_lon),
-  ("pickup_latitude", "pickup_latitude_invalid",
-   tc.GeoBounds.min_lat, tc.GeoBounds.max_lat),
-  ("dropoff_longitude", "dropoff_longitude_invalid",
-   tc.GeoBounds.min_lon, tc.GeoBounds.max_lon),
-  ("dropoff_latitude", "dropoff_latitude_invalid",
-   tc.GeoBounds.min_lat, tc.GeoBounds.max_lat),
-  ("trip_duration", "trip_duration_outlier",
-   tc.TripDurationLimits.min_sec, tc.TripDurationLimits.max_sec),
+  (
+    "passenger_count",
+    "passenger_count_invalid",
+    tc.PassengerLimits.min_passengers,
+    tc.PassengerLimits.max_passengers,
+  ),
+  (
+    "pickup_longitude",
+    "pickup_longitude_invalid",
+    tc.GeoBounds.min_lon,
+    tc.GeoBounds.max_lon,
+  ),
+  (
+    "pickup_latitude",
+    "pickup_latitude_invalid",
+    tc.GeoBounds.min_lat,
+    tc.GeoBounds.max_lat,
+  ),
+  (
+    "dropoff_longitude",
+    "dropoff_longitude_invalid",
+    tc.GeoBounds.min_lon,
+    tc.GeoBounds.max_lon,
+  ),
+  (
+    "dropoff_latitude",
+    "dropoff_latitude_invalid",
+    tc.GeoBounds.min_lat,
+    tc.GeoBounds.max_lat,
+  ),
+  (
+    "trip_duration",
+    "trip_duration_outlier",
+    tc.TripDurationLimits.min_sec,
+    tc.TripDurationLimits.max_sec,
+  ),
 )
 
 # Column order produced by build_taxi_dataset, minus the clustering step
 # (MiniBatchKMeans needs more rows than a six-row fixture provides).
 EXPECTED_TAXI_COLUMNS = [
-  "id", "vendor_id", "pickup_datetime", "dropoff_datetime", "passenger_count",
-  "pickup_longitude", "pickup_latitude", "dropoff_longitude",
-  "dropoff_latitude", "store_and_fwd_flag", "trip_duration",
-  "passenger_count_invalid", "pickup_longitude_invalid",
-  "pickup_latitude_invalid", "dropoff_longitude_invalid",
-  "dropoff_latitude_invalid", "trip_duration_outlier",
-  "store_and_fwd_flag_bin", "is_holiday", "trip_duration_min",
-  "trip_duration_log", "is_group_trip", "hav_dist_km", "hav_dist_km_log",
-  "pickup_hour", "pickup_weekday", "pickup_month", "hour_of_year",
-  "is_weekend", "is_early_morning", "is_rush_am", "is_rush_pm", "is_night",
-  "is_jfk_pick", "is_jfk_drop", "is_laguardia_pick", "is_laguardia_drop",
+  "id",
+  "vendor_id",
+  "pickup_datetime",
+  "dropoff_datetime",
+  "passenger_count",
+  "pickup_longitude",
+  "pickup_latitude",
+  "dropoff_longitude",
+  "dropoff_latitude",
+  "store_and_fwd_flag",
+  "trip_duration",
+  "passenger_count_invalid",
+  "pickup_longitude_invalid",
+  "pickup_latitude_invalid",
+  "dropoff_longitude_invalid",
+  "dropoff_latitude_invalid",
+  "trip_duration_outlier",
+  "store_and_fwd_flag_bin",
+  "is_holiday",
+  "trip_duration_min",
+  "trip_duration_log",
+  "is_group_trip",
+  "hav_dist_km",
+  "hav_dist_km_log",
+  "pickup_hour",
+  "pickup_weekday",
+  "pickup_month",
+  "hour_of_year",
+  "is_weekend",
+  "is_early_morning",
+  "is_rush_am",
+  "is_rush_pm",
+  "is_night",
+  "is_jfk_pick",
+  "is_jfk_drop",
+  "is_laguardia_pick",
+  "is_laguardia_drop",
 ]
 
 EXPECTED_TAXI_DTYPES = {
-  "trip_duration_min": "float32", "trip_duration_log": "float32",
-  "hav_dist_km": "float32", "hav_dist_km_log": "float32",
-  "store_and_fwd_flag_bin": "Int8", "is_holiday": "int8",
-  "is_group_trip": "int8", "pickup_hour": "int8", "pickup_weekday": "int8",
-  "pickup_month": "int8", "hour_of_year": "int16", "is_weekend": "int8",
-  "is_early_morning": "int8", "is_rush_am": "int8", "is_rush_pm": "int8",
-  "is_night": "int8", "is_jfk_pick": "int8", "is_jfk_drop": "int8",
-  "is_laguardia_pick": "int8", "is_laguardia_drop": "int8",
+  "trip_duration_min": "float32",
+  "trip_duration_log": "float32",
+  "hav_dist_km": "float32",
+  "hav_dist_km_log": "float32",
+  "store_and_fwd_flag_bin": "Int8",
+  "is_holiday": "int8",
+  "is_group_trip": "int8",
+  "pickup_hour": "int8",
+  "pickup_weekday": "int8",
+  "pickup_month": "int8",
+  "hour_of_year": "int16",
+  "is_weekend": "int8",
+  "is_early_morning": "int8",
+  "is_rush_am": "int8",
+  "is_rush_pm": "int8",
+  "is_night": "int8",
+  "is_jfk_pick": "int8",
+  "is_jfk_drop": "int8",
+  "is_laguardia_pick": "int8",
+  "is_laguardia_drop": "int8",
   "trip_duration_outlier": "int8",
 }
 
@@ -96,10 +159,18 @@ def test_row_count_preserved(taxi_features):
 # ------------------------------------------------------------ taxi features
 def test_trip_duration_features(taxi_features):
   assert taxi_features["trip_duration_min"].tolist() == [
-    15.0, 45.0, 45.0, 15.0, 15.0, 120.0]
+    15.0,
+    45.0,
+    45.0,
+    15.0,
+    15.0,
+    120.0,
+  ]
   np.testing.assert_allclose(
-      taxi_features["trip_duration_log"],
-      np.log1p([900, 2700, 2700, 900, 900, 7200]), rtol=1e-6)
+    taxi_features["trip_duration_log"],
+    np.log1p([900, 2700, 2700, 900, 900, 7200]),
+    rtol=1e-6,
+  )
 
 
 def test_store_and_fwd_and_group_flags(taxi_features):
@@ -121,24 +192,39 @@ def test_time_features(taxi_features):
   assert taxi_features["is_night"].tolist() == [0, 0, 0, 1, 0, 0]
   assert taxi_features["is_early_morning"].tolist() == [0, 0, 0, 0, 1, 0]
   assert taxi_features["hour_of_year"].tolist() == [
-    1790, 1783, 1793, 1895, 4, 4356]
+    1790,
+    1783,
+    1793,
+    1895,
+    4,
+    4356,
+  ]
 
 
 def test_haversine_distance(taxi_features):
   np.testing.assert_allclose(
-      taxi_features["hav_dist_km"],
-      [1.325793, 20.747200, 9.495442, 2.531202, 0.968033, 0.0], rtol=1e-5)
+    taxi_features["hav_dist_km"],
+    [1.325793, 20.747200, 9.495442, 2.531202, 0.968033, 0.0],
+    rtol=1e-5,
+  )
   np.testing.assert_allclose(
-      taxi_features["hav_dist_km_log"],
-      np.log1p(taxi_features["hav_dist_km"]), rtol=1e-5)
+    taxi_features["hav_dist_km_log"],
+    np.log1p(taxi_features["hav_dist_km"]),
+    rtol=1e-5,
+  )
 
 
 def test_outlier_flagging_and_clipping(taxi_features):
   # Row 5 sits outside the NYC bounding box on every coordinate.
   assert taxi_features["pickup_longitude_invalid"].tolist() == [
-    0, 0, 0, 0, 0, 1]
-  assert taxi_features["pickup_latitude_invalid"].tolist() == [
-    0, 0, 0, 0, 0, 1]
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+  ]
+  assert taxi_features["pickup_latitude_invalid"].tolist() == [0, 0, 0, 0, 0, 1]
   # ...and its coordinates are clipped back onto the boundary.
   assert taxi_features.loc[5, "pickup_longitude"] == tc.GeoBounds.min_lon
   assert taxi_features.loc[5, "pickup_latitude"] == tc.GeoBounds.max_lat
@@ -184,30 +270,40 @@ def weather_features() -> pd.DataFrame:
 
 def test_unit_conversions(weather_features):
   np.testing.assert_allclose(
-      weather_features["temp_c"],
-      [10.0, 11.111111, 12.777778, -1.111111], rtol=1e-5)
+    weather_features["temp_c"],
+    [10.0, 11.111111, 12.777778, -1.111111],
+    rtol=1e-5,
+  )
   np.testing.assert_allclose(
-      weather_features["windspeed_kph"],
-      [16.09340, 19.31208, 12.87472, 32.18680], rtol=1e-5)
+    weather_features["windspeed_kph"],
+    [16.09340, 19.31208, 12.87472, 32.18680],
+    rtol=1e-5,
+  )
   np.testing.assert_allclose(
-      weather_features["pressure_hpa"],
-      [1013.207888, 1012.530610, 1014.223805, 1019.303390], rtol=1e-6)
+    weather_features["pressure_hpa"],
+    [1013.207888, 1012.530610, 1014.223805, 1019.303390],
+    rtol=1e-6,
+  )
 
 
 def test_trace_values_replaced(weather_features):
   """'T' becomes the configured trace constant, then converts to mm."""
   np.testing.assert_allclose(
-      weather_features["daily_precip_mm"], [0.0, 0.254, 0.0, 12.7], rtol=1e-6)
+    weather_features["daily_precip_mm"], [0.0, 0.254, 0.0, 12.7], rtol=1e-6
+  )
   np.testing.assert_allclose(
-      weather_features["daily_snow_mm"], [0.0, 0.0, 0.0, 2.54], rtol=1e-6)
+    weather_features["daily_snow_mm"], [0.0, 0.0, 0.0, 2.54], rtol=1e-6
+  )
 
 
 def test_precip_split_by_condition(weather_features):
   """precip_mm is routed to rain or snow by the free-text 'conditions'."""
   np.testing.assert_allclose(
-      weather_features["rain_mm"], [0.0, 2.54, 0.0, 0.0], rtol=1e-6)
+    weather_features["rain_mm"], [0.0, 2.54, 0.0, 0.0], rtol=1e-6
+  )
   np.testing.assert_allclose(
-      weather_features["snow_mm"], [0.0, 0.0, 0.0, 5.08], rtol=1e-6)
+    weather_features["snow_mm"], [0.0, 0.0, 0.0, 5.08], rtol=1e-6
+  )
 
 
 def test_weather_time_features(weather_features):
@@ -219,18 +315,24 @@ def test_hourly_aggregation_collapses_to_distinct_hours(weather_features):
   agg = wu.aggregate_weather_hourly(weather_features)
   assert len(agg) == 3  # the two 14:00 observations merge
   assert agg["datetime_hour"].astype(str).tolist() == [
-    "2016-01-01 04:00:00", "2016-03-15 14:00:00", "2016-03-15 15:00:00"]
+    "2016-01-01 04:00:00",
+    "2016-03-15 14:00:00",
+    "2016-03-15 15:00:00",
+  ]
 
 
 def test_ordinal_classification(weather_features):
   cls = wu.classify_weather_data(weather_features)
   assert cls["temp_class"].tolist() == ["cool", "mild", "mild", "cold"]
   assert cls["temp_code"].tolist() == [1, 2, 2, 0]
-  assert cls["humidity_class"].tolist() == [
-    "normal", "normal", "dry", "normal"]
+  assert cls["humidity_class"].tolist() == ["normal", "normal", "dry", "normal"]
   assert cls["fog_class"].tolist() == ["no_fog", "no_fog", "no_fog", "fog"]
   assert cls["cloud_class"].tolist() == [
-    "clear", "unknown", "partly_cloudy", "unknown"]
+    "clear",
+    "unknown",
+    "partly_cloudy",
+    "unknown",
+  ]
 
 
 # ------------------------------------------------------------- merge key

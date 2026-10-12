@@ -74,3 +74,8 @@ max-positional-args = 8
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.17.0",
+]

@@ -1,9 +1,10 @@
-"""Raw taxi trips -> cleaned, feature-engineered modelling table."""
+"""Raw taxi trips -> cleaned, feature-engineered modeling table."""
+
 from __future__ import annotations
 
 import pandas as pd
 
-import nyc_taxi.config.modell_constants as modelling_constants
+import nyc_taxi.config.model_constants as modeling_constants
 from nyc_taxi import data_io
 from nyc_taxi.config import path_file_constants as paths
 from nyc_taxi.config import taxi_constants
@@ -47,36 +48,56 @@ def build_taxi_dataset(save_csv: bool = False) -> pd.DataFrame:
 
   # 2 convert datetime obj to datetime dtype ----------------------------------
 
-  df['pickup_datetime'] = pd.to_datetime(df['pickup_datetime'], errors="coerce"
-                                         )
-  df['dropoff_datetime'] = pd.to_datetime(df['dropoff_datetime'],
-                                          errors="coerce"
-                                          )
+  df["pickup_datetime"] = pd.to_datetime(df["pickup_datetime"], errors="coerce")
+  df["dropoff_datetime"] = pd.to_datetime(
+    df["dropoff_datetime"], errors="coerce"
+  )
 
   # 3 Outlier-Flags / Clipping  ----------------------------------------
   outlier = (
-    ("passenger_count", "passenger_count_invalid",
-     taxi_constants.PassengerLimits.min_passengers,
-     taxi_constants.PassengerLimits.max_passengers),
-    ("pickup_longitude", "pickup_longitude_invalid",
-     taxi_constants.GeoBounds.min_lon,
-     taxi_constants.GeoBounds.max_lon),
-    ("pickup_latitude", "pickup_latitude_invalid",
-     taxi_constants.GeoBounds.min_lat, taxi_constants.GeoBounds.max_lat),
-    ("dropoff_longitude", "dropoff_longitude_invalid",
-     taxi_constants.GeoBounds.min_lon, taxi_constants.GeoBounds.max_lon),
-    ("dropoff_latitude", "dropoff_latitude_invalid",
-     taxi_constants.GeoBounds.min_lat, taxi_constants.GeoBounds.max_lat),
-    ("trip_duration", "trip_duration_outlier",
-     taxi_constants.TripDurationLimits.min_sec,
-     taxi_constants.TripDurationLimits.max_sec)
+    (
+      "passenger_count",
+      "passenger_count_invalid",
+      taxi_constants.PassengerLimits.min_passengers,
+      taxi_constants.PassengerLimits.max_passengers,
+    ),
+    (
+      "pickup_longitude",
+      "pickup_longitude_invalid",
+      taxi_constants.GeoBounds.min_lon,
+      taxi_constants.GeoBounds.max_lon,
+    ),
+    (
+      "pickup_latitude",
+      "pickup_latitude_invalid",
+      taxi_constants.GeoBounds.min_lat,
+      taxi_constants.GeoBounds.max_lat,
+    ),
+    (
+      "dropoff_longitude",
+      "dropoff_longitude_invalid",
+      taxi_constants.GeoBounds.min_lon,
+      taxi_constants.GeoBounds.max_lon,
+    ),
+    (
+      "dropoff_latitude",
+      "dropoff_latitude_invalid",
+      taxi_constants.GeoBounds.min_lat,
+      taxi_constants.GeoBounds.max_lat,
+    ),
+    (
+      "trip_duration",
+      "trip_duration_outlier",
+      taxi_constants.TripDurationLimits.min_sec,
+      taxi_constants.TripDurationLimits.max_sec,
+    ),
   )
 
   df = shared_utilities.flag_and_clip(df, outlier)
 
   # 4 feature creation ----------------------------------------
   df = taxi_utilities.add_store_and_fwd_flag(df)
-  df = taxi_utilities.add_us_holiday_flag(df, 'pickup_datetime')
+  df = taxi_utilities.add_us_holiday_flag(df, "pickup_datetime")
   df = taxi_utilities.add_trip_duration_features(df)
   df = taxi_utilities.create_is_group_trip(df)
   df = distance_utilities.add_haversine(df)
@@ -86,28 +107,38 @@ def build_taxi_dataset(save_csv: bool = False) -> pd.DataFrame:
     df = taxi_utilities.add_airport_flags(df, _airport, _lon, _lat)
 
   if taxi_constants.ENABLE_MB:
-    df = taxi_utilities.create_geo_clusters(df, ['pickup_longitude',
-                                                 'pickup_latitude'],
-                                            'pickup',
-                                            taxi_constants.N_PICKUP_CLUSTERS,
-                                            modelling_constants.RANDOM_STATE,
-                                            taxi_constants.CLUSTER_BATCH_SIZE)
-    df = taxi_utilities.create_geo_clusters(df, ['dropoff_longitude',
-                                                 'dropoff_latitude'],
-                                            'dropoff',
-                                            taxi_constants.N_DROPOFF_CLUSTERS,
-                                            modelling_constants.RANDOM_STATE,
-                                            taxi_constants.CLUSTER_BATCH_SIZE)
+    df = taxi_utilities.create_geo_clusters(
+      df,
+      ["pickup_longitude", "pickup_latitude"],
+      "pickup",
+      taxi_constants.N_PICKUP_CLUSTERS,
+      modeling_constants.RANDOM_STATE,
+      taxi_constants.CLUSTER_BATCH_SIZE,
+    )
+    df = taxi_utilities.create_geo_clusters(
+      df,
+      ["dropoff_longitude", "dropoff_latitude"],
+      "dropoff",
+      taxi_constants.N_DROPOFF_CLUSTERS,
+      modeling_constants.RANDOM_STATE,
+      taxi_constants.CLUSTER_BATCH_SIZE,
+    )
 
   if taxi_constants.ENABLE_HDBC:
-    df = cluster_utilities.add_hdbc_clusters(df, "pickup",
-                                             taxi_constants.PICKUP_COORDS,
-                                             taxi_constants.PICKUP_MIN_CLUSTER_SIZE,
-                                             taxi_constants.PICKUP_MIN_SAMPLES)
-    df = cluster_utilities.add_hdbc_clusters(df, "dropoff",
-                                             taxi_constants.DROPOFF_COORDS,
-                                             taxi_constants.DROPOFF_MIN_CLUSTER_SIZE,
-                                             taxi_constants.DROPOFF_MIN_SAMPLES)
+    df = cluster_utilities.add_hdbc_clusters(
+      df,
+      "pickup",
+      taxi_constants.PICKUP_COORDS,
+      taxi_constants.PICKUP_MIN_CLUSTER_SIZE,
+      taxi_constants.PICKUP_MIN_SAMPLES,
+    )
+    df = cluster_utilities.add_hdbc_clusters(
+      df,
+      "dropoff",
+      taxi_constants.DROPOFF_COORDS,
+      taxi_constants.DROPOFF_MIN_CLUSTER_SIZE,
+      taxi_constants.DROPOFF_MIN_SAMPLES,
+    )
 
   # 5 write CSV ---------------------------------------------------
   if save_csv:

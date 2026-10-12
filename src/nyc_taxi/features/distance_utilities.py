@@ -6,6 +6,7 @@ calls a locally hosted OSRM server and is currently disabled in
 ``taxi_pipeline``; it checkpoints to parquet after every chunk so an
 interrupted run resumes instead of restarting.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -23,11 +24,11 @@ OSRM_URL = "http://localhost:5001/route/v1/driving/"
 
 
 def haversine(
-    lat1: ArrayLike,
-    lon1: ArrayLike,
-    lat2: ArrayLike,
-    lon2: ArrayLike,
-    radius: float = EARTH_RADIUS_KM
+  lat1: ArrayLike,
+  lon1: ArrayLike,
+  lat2: ArrayLike,
+  lon2: ArrayLike,
+  radius: float = EARTH_RADIUS_KM,
 ) -> np.ndarray:
   """
   Vectorised great‑circle distance between two points using the
@@ -49,13 +50,14 @@ def haversine(
   """
   # Ensure NumPy arrays for broadcasting then convert to radians
   lat1, lon1, lat2, lon2 = map(
-      np.radians, map(np.asarray, (lat1, lon1, lat2, lon2))
+    np.radians, map(np.asarray, (lat1, lon1, lat2, lon2))
   )
   dlat = lat2 - lat1
   dlon = lon2 - lon1
-  a = np.sin(dlat / 2.0) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(
-      dlon / 2.0
-  ) ** 2
+  a = (
+    np.sin(dlat / 2.0) ** 2
+    + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2.0) ** 2
+  )
   return 2.0 * radius * np.arcsin(np.sqrt(a))
 
 
@@ -64,9 +66,7 @@ def osrm_distance_km(pick_lon, pick_lat, drop_lon, drop_lat):
 
   Requires OSRM listening on ``OSRM_URL``; there is no fallback.
   """
-  url = (f"{OSRM_URL}"
-         f"{pick_lon},{pick_lat};{drop_lon},{drop_lat}"
-         "?overview=false")
+  url = f"{OSRM_URL}{pick_lon},{pick_lat};{drop_lon},{drop_lat}?overview=false"
   r = requests.get(url, timeout=2)
   if r.ok and r.json()["code"] == "Ok":
     return r.json()["routes"][0]["distance"] / 1000.0  # metres → km
@@ -90,10 +90,10 @@ def add_haversine(df: pd.DataFrame) -> pd.DataFrame:
   _check_columns(df, needed)
   df = df.copy()
   df["hav_dist_km"] = haversine(
-      df["pickup_latitude"],
-      df["pickup_longitude"],
-      df["dropoff_latitude"],
-      df["dropoff_longitude"],
+    df["pickup_latitude"],
+    df["pickup_longitude"],
+    df["dropoff_latitude"],
+    df["dropoff_longitude"],
   ).astype("float32")
   df["hav_dist_km_log"] = np.log1p(df["hav_dist_km"]).astype("float32")
   return df
@@ -121,12 +121,15 @@ def add_route_distance(df):
     done = None
   chunk = 50_000
   for i in range(0, len(df_remaining), chunk):
-    sub = df_remaining.iloc[i:i + chunk].copy()
+    sub = df_remaining.iloc[i : i + chunk].copy()
     sub["route_distance_km"] = sub.progress_apply(
-        lambda row: osrm_distance_km(
-            row.pickup_longitude, row.pickup_latitude,
-            row.dropoff_longitude, row.dropoff_latitude
-        ), axis=1
+      lambda row: osrm_distance_km(
+        row.pickup_longitude,
+        row.pickup_latitude,
+        row.dropoff_longitude,
+        row.dropoff_latitude,
+      ),
+      axis=1,
     ).astype("float32")
 
     done = sub if done is None else pd.concat([done, sub], axis=0)
@@ -134,5 +137,5 @@ def add_route_distance(df):
   if done is None:  # empty input and no checkpoint yet
     done = df.assign(route_distance_km=pd.Series(dtype="float32"))
   df = done
-  df['route_distance_log_km'] = np.log1p(df['route_distance_km'])
+  df["route_distance_log_km"] = np.log1p(df["route_distance_km"])
   return df

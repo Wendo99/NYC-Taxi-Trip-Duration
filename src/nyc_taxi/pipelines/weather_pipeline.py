@@ -1,4 +1,5 @@
 """Raw weather observations -> cleaned hourly table with ordinal classes."""
+
 from __future__ import annotations
 
 import logging
@@ -17,8 +18,7 @@ log = logging.getLogger(__name__)
 
 
 def build_weather_dataset(
-    save_csv: bool = False,
-    verbose: bool = False
+  save_csv: bool = False, verbose: bool = False
 ) -> pd.DataFrame:
   """Return a fully processed hourly weather DataFrame.
 
@@ -49,21 +49,25 @@ def build_weather_dataset(
   df = feat_weather.convert_units(df)
 
   # 4. Interpolate   ----------
-  df = (
-    df.set_index("datetime")
-    .sort_index()
-  )
+  df = df.set_index("datetime").sort_index()
   df["windspeed_kph"] = df["windspeed_kph"].interpolate(method="time")
   df["pressure_hpa"] = df["pressure_hpa"].interpolate(method="time")
   df = df.reset_index()  # brings 'datetime' back as a column
 
-  outlier = (("windspeed_kph",
-              "windspeed_outliers",
-              w.WindLimits.kph_min,
-              w.WindLimits.kph_max), ("daily_snow_mm",
-                                      "daily_snow_outliers",
-                                      w.DailySnowLimit.mm_min,
-                                      w.DailySnowLimit.mm_max))
+  outlier = (
+    (
+      "windspeed_kph",
+      "windspeed_outliers",
+      w.WindLimits.kph_min,
+      w.WindLimits.kph_max,
+    ),
+    (
+      "daily_snow_mm",
+      "daily_snow_outliers",
+      w.DailySnowLimit.mm_min,
+      w.DailySnowLimit.mm_max,
+    ),
+  )
 
   # 5. Flag + clip outliers   ----------
   df = feat_utils.flag_and_clip(df, outlier)

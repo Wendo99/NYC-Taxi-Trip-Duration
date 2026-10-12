@@ -3,6 +3,7 @@
 Figures are written under ``figures/`` at the repository root. Pass
 ``save_path=None`` (the default) to display without saving.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -75,8 +76,9 @@ def plot_boxplot(df, col: str) -> None:
   plt.show()
 
 
-def ensure_predictions_and_residuals(df_err, model, x, y, pred_col="y_pred",
-    resid_col="residual"):
+def ensure_predictions_and_residuals(
+  df_err, model, x, y, pred_col="y_pred", resid_col="residual"
+):
   """Add prediction and residual columns to *df_err* if they are missing."""
   df = df_err.copy()
 
@@ -86,15 +88,17 @@ def ensure_predictions_and_residuals(df_err, model, x, y, pred_col="y_pred",
     check_is_fitted(model)
   except NotFittedError as exc:
     raise RuntimeError(
-        "Model is not fitted. Fit it before computing predictions.") from exc
+      "Model is not fitted. Fit it before computing predictions."
+    ) from exc
 
   if pred_col not in df.columns:
     preds = np.asarray(model.predict(x)).ravel()
     df[pred_col] = pd.Series(preds, index=x.index)
 
   if resid_col not in df.columns:
-    y_series = y.copy() if isinstance(y, pd.Series) else pd.Series(y,
-                                                                   index=x.index)
+    y_series = (
+      y.copy() if isinstance(y, pd.Series) else pd.Series(y, index=x.index)
+    )
     df[resid_col] = df[pred_col] - y_series
 
   return df
@@ -105,10 +109,10 @@ def plot_residual_distribution(df_err, model_name, save_path=None):
   plt.figure(figsize=(8, 5))
   sns.histplot(df_err["residual"], bins=50, kde=True, color="steelblue")
 
-  plt.axvline(0, color="red", linestyle="--", linewidth=1.2,
-              label="Zero Residual")
-  plt.title(f"Residual Distribution – {model_name}", fontsize=14,
-            weight="bold")
+  plt.axvline(
+    0, color="red", linestyle="--", linewidth=1.2, label="Zero Residual"
+  )
+  plt.title(f"Residual Distribution – {model_name}", fontsize=14, weight="bold")
   plt.xlabel("Residual (log-seconds)")
   plt.ylabel("Frequency")
   plt.legend()
@@ -122,13 +126,21 @@ def plot_residual_distribution(df_err, model_name, save_path=None):
 def plot_residual_scatter(df_err, model_name, save_path=None):
   """Residuals against predictions, to detect heteroscedasticity or bias."""
   plt.figure(figsize=(8, 5))
-  sns.scatterplot(data=df_err, x="y_pred", y="residual", alpha=0.4,
-                  edgecolor=None, color="royalblue")
+  sns.scatterplot(
+    data=df_err,
+    x="y_pred",
+    y="residual",
+    alpha=0.4,
+    edgecolor=None,
+    color="royalblue",
+  )
 
-  plt.axhline(0, color="red", linestyle="--", linewidth=1.2,
-              label="Zero Residual")
-  plt.title(f"Residuals vs Predicted Values – {model_name}", fontsize=14,
-            weight="bold")
+  plt.axhline(
+    0, color="red", linestyle="--", linewidth=1.2, label="Zero Residual"
+  )
+  plt.title(
+    f"Residuals vs Predicted Values – {model_name}", fontsize=14, weight="bold"
+  )
   plt.xlabel("Predicted log(Trip Duration)")
   plt.ylabel("Residual (Predicted - Actual)")
   plt.legend()
@@ -139,20 +151,25 @@ def plot_residual_scatter(df_err, model_name, save_path=None):
   plt.show()
 
 
-def plot_residual_heatmap(df_err, model_name, x_col="dist_bin",
-    y_col="hour_of_day", save_path=None):
+def plot_residual_heatmap(
+  df_err, model_name, x_col="dist_bin", y_col="hour_of_day", save_path=None
+):
   """Mean residual across two binned dimensions."""
   pivot_table = (
-    df_err
-    .groupby([y_col, x_col])
+    df_err.groupby([y_col, x_col])
     .agg(mean_residual=("residual", "mean"))
     .reset_index()
     .pivot(index=y_col, columns=x_col, values="mean_residual")
   )
 
   plt.figure(figsize=(9, 6))
-  sns.heatmap(pivot_table, cmap="RdYlBu_r", center=0, linewidths=0.5,
-              cbar_kws={"label": "Mean Residual (log-seconds)"})
+  sns.heatmap(
+    pivot_table,
+    cmap="RdYlBu_r",
+    center=0,
+    linewidths=0.5,
+    cbar_kws={"label": "Mean Residual (log-seconds)"},
+  )
 
   plt.title(f"Residual Heatmap – {model_name}", fontsize=14, weight="bold")
   plt.xlabel("Distance Bin (binned log-distance)")
@@ -171,22 +188,26 @@ def show_corr_matrix(mask, corr, save_path=None):
   sns.set_context("talk")
   plt.figure(figsize=(12, 10))
   ax = sns.heatmap(
-      corr,
-      mask=mask,
-      cmap="coolwarm",
-      vmin=-1,
-      vmax=1,
-      center=0,
-      annot=True,
-      fmt=".2f",
-      annot_kws={"size": 9},
-      linewidths=0.5,
-      linecolor="gray",
-      cbar_kws={"shrink": 0.75, "label": "Pearson r"},
-      square=False,
+    corr,
+    mask=mask,
+    cmap="coolwarm",
+    vmin=-1,
+    vmax=1,
+    center=0,
+    annot=True,
+    fmt=".2f",
+    annot_kws={"size": 9},
+    linewidths=0.5,
+    linecolor="gray",
+    cbar_kws={"shrink": 0.75, "label": "Pearson r"},
+    square=False,
   )
-  ax.set_title("Correlation Matrix of Numeric Features", fontsize=18,
-               fontweight="bold", pad=16)
+  ax.set_title(
+    "Correlation Matrix of Numeric Features",
+    fontsize=18,
+    fontweight="bold",
+    pad=16,
+  )
   ax.set_xlabel("Features", fontsize=12, labelpad=10)
   ax.set_ylabel("Features", fontsize=12, labelpad=10)
 

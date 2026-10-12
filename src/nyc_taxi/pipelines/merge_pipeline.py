@@ -1,4 +1,5 @@
 """Join the processed taxi and weather datasets on the shared hour key."""
+
 from __future__ import annotations
 
 import pandas as pd
@@ -13,10 +14,10 @@ from nyc_taxi.frames import read_frame
 
 
 def merge_taxi_weather(
-    taxi_df: pd.DataFrame | None = None,
-    weather_df: pd.DataFrame | None = None,
-    on: str = "hour_of_year",
-    suffixes: tuple[str, str] = ("", "_wx"),
+  taxi_df: pd.DataFrame | None = None,
+  weather_df: pd.DataFrame | None = None,
+  on: str = "hour_of_year",
+  suffixes: tuple[str, str] = ("", "_wx"),
 ) -> pd.DataFrame:
   """
   Merge taxi and weather frames on the specified key.
@@ -45,12 +46,12 @@ def merge_taxi_weather(
     raise KeyError(f"join key {on!r} must exist in both frames")
 
   return pd.merge(
-      taxi,
-      weather,
-      how="left",
-      on=on,
-      validate="many_to_one",
-      suffixes=suffixes,
+    taxi,
+    weather,
+    how="left",
+    on=on,
+    validate="many_to_one",
+    suffixes=suffixes,
   )
 
 
