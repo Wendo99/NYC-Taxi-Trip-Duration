@@ -9,8 +9,6 @@ enriched with hourly weather observations.
 Result: With XGBoost, test RMSE 0.3288 on the log target, 54.6 % better than predicting
 the mean, with an overfit gap of 0.0045.
 
----
-
 ## Results
 
 Held-out test set of 288,397 trips, never seen during training or model
@@ -69,10 +67,12 @@ Two findings from the EDA that shaped everything downstream:
   1,458,644 rows, to the second. Handing a model `dropoff_datetime` lets it
   recover the target by subtraction, so it sits in `DROPPED_FEATURES`. It is
   also unavailable at prediction time, the trip has not finished.
-- Cleaning flags rather than deletes. 16,660 rows (1.14 %) trip at least
-  one validity check; out-of-range values are clipped to the boundary and
-  marked in a `*_invalid` column, so the row count stays stable and the flag
-  itself becomes a feature.
+- Cleaning flags, then excludes. Out-of-range values are clipped to the boundary
+    and marked in a `*_invalid` column. 16,660 rows (1.14 %) trip at least one
+    check (coordinates outside the configured bounds, passenger count outside its
+    limits, or a trip shorter than 60 s or longer than 3 h). The modeling notebook
+    removes these rows before the train/test split, so models are trained and
+    scored on 1,441,984 trips. The flags are not model features.
 
 ## Project structure
 
@@ -97,7 +97,7 @@ data/                # gitignored; created on demand
 Paths are resolved from `pyproject.toml` upward, so every entry point behaves
 the same whether it runs from `notebooks/`, `src/` or the repository root.
 
-## Setup
+## Setup, build, test, and run
 
 ### 1. Install uv
 
@@ -155,8 +155,6 @@ uv run pytest
 - Hyperparameters are fixed, taken from an earlier randomized search (reproducible via
   `search_hyperparameters`; the spaces live in
   `config/model_constants.py`) rather than re-tuned.
-
----
 
 ## Data
 

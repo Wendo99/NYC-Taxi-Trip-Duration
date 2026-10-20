@@ -3,7 +3,7 @@
 The limit classes (``PassengerLimits``, ``TripDurationLimits``, ``GeoBounds``)
 drive ``flag_and_clip``: values outside a bound are flagged in a companion
 ``*_invalid`` column and clipped to the boundary, rather than dropped, so the
-row count stays stable and the flag itself is available as a signal.
+ row count stays stable at this stage; flagged rows are excluded before training.
 
 ``AIRPORT_BOXES`` is validated at import time — an inverted (min, max) pair
 yields a feature that is silently always zero, which is exactly what happened
@@ -46,40 +46,40 @@ LAGUARDIA_LON = (-73.894, -73.861)
 LAGUARDIA_LAT = (40.765, 40.774)
 
 AIRPORT_BOXES = {
-  "jfk": (JFK_LON, JFK_LAT),
-  "laguardia": (LAGUARDIA_LON, LAGUARDIA_LAT),
+    "jfk": (JFK_LON, JFK_LAT),
+    "laguardia": (LAGUARDIA_LON, LAGUARDIA_LAT),
 }
 
 for _name, (_lon, _lat) in AIRPORT_BOXES.items():
-  if _lon[0] >= _lon[1] or _lat[0] >= _lat[1]:
-    raise ValueError(
-      f"{_name}: bounding box must be (min, max) per axis, got "
-      f"lon={_lon}, lat={_lat}"
-    )
+    if _lon[0] >= _lon[1] or _lat[0] >= _lat[1]:
+        raise ValueError(
+            f"{_name}: bounding box must be (min, max) per axis, got "
+            f"lon={_lon}, lat={_lat}"
+        )
 
 
 # ------------------------------------------------------------
 @dataclass(frozen=True)
 class PassengerLimits:
-  min_passengers: int = 1
-  max_passengers: int = 6
+    min_passengers: int = 1
+    max_passengers: int = 6
 
 
 @dataclass(frozen=True)
 class TripDurationLimits:
-  min_sec: int = 60
-  max_sec: int = 3 * 3600
+    min_sec: int = 60
+    max_sec: int = 3 * 3600
 
 
 @dataclass(frozen=True)
 class GeoBounds:
-  min_lon: float = -74.05
-  max_lon: float = -73.73
-  min_lat: float = 40.59
-  max_lat: float = 40.90
-  cols: ClassVar[list[str]] = [
-    "pickup_longitude",
-    "pickup_latitude",
-    "dropoff_longitude",
-    "dropoff_latitude",
-  ]
+    min_lon: float = -74.05
+    max_lon: float = -73.73
+    min_lat: float = 40.59
+    max_lat: float = 40.90
+    cols: ClassVar[list[str]] = [
+        "pickup_longitude",
+        "pickup_latitude",
+        "dropoff_longitude",
+        "dropoff_latitude",
+    ]

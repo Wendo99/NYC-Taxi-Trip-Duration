@@ -35,7 +35,7 @@ def test_accepts_a_path_object(csv):
 def test_takes_no_reader_options(csv):
   """No **kwargs, so chunk size can never break the DataFrame guarantee."""
   with pytest.raises(TypeError):
-    read_frame(csv)
+    read_frame(csv, chunksize=1)  # type: ignore[call-arg]
 
 
 def test_missing_file_raises(tmp_path):
