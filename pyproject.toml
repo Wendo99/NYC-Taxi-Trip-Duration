@@ -18,7 +18,7 @@ dependencies = [
     "shapely>=2.0",
     "tqdm>=4.66",
     "requests>=2.32",
-    "kaggle>=1.6",
+    "kaggle>=2.2.5",
     "ipykernel>=7.3.0",
 ]
 

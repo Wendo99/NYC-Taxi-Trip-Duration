@@ -1,191 +1,140 @@
-# NYC Taxi Trip Duration
+# NYC Taxi Trip Duration Prediction
 
-A coursework in 'Machine Learning' predicting how long a New York City taxi trip will take, from
-1.46 million
-yellow-cab records covering January–June 2016
-([Kaggle competition](https://www.kaggle.com/c/nyc-taxi-trip-duration/overview)),
-enriched with hourly weather observations.
+A machine learning coursework project predicting the duration of New York City yellow-cab trips using 1,458,644 records from January–June 2016, enriched with hourly weather observations. Alongside modelling, the project implements a modular Python package for data acquisition, cleaning, validation, feature engineering and evaluation.
 
-Result: With XGBoost, test RMSE 0.3288 on the log target, 54.6 % better than predicting
-the mean, with an overfit gap of 0.0045.
+**Headline result:** XGBoost achieved 0.3288 RMSE on `log1p(trip_duration)` on a held-out set of 288,397 trips, 54.6% lower than the mean-prediction baseline of 0.7247. The metric is on the transformed target scale, not in seconds.
 
-## Results
+## Quick start
 
-Held-out test set of 288,397 trips, never seen during training or model
-selection. The target is `log1p(trip_duration)`, matching the competition's
-RMSLE metric, so every RMSE below is on that log scale.
-
-|                                         | RMSE       | vs. baseline |
-|-----------------------------------------|------------|--------------|
-| Baseline (predict the training mean)    | 0.7247     | —            |
-| **XGBoost, trained on all 1.15 M rows** | **0.3288** | **54.6 %**   |
-
-Model selection, 3-fold cross-validation on an identical 300,000-row
-subsample:
-
-| Model            | CV RMSE    | ±      | Fit time |
-|------------------|------------|--------|----------|
-| **XGBoost**      | **0.3404** | 0.0007 | 4 s      |
-| RandomForest     | 0.3450     | 0.0008 | 61 s     |
-| LinearRegression | 0.4228     | 0.0008 | 1 s      |
-
-The train/test gap of 0.0045 is the number worth noting: on 1.15 M rows a
-gradient-boosted ensemble has ample capacity to memorize, and it has not.
-
-## The three questions this project set out to answer
-
-Which characteristics matter most?
-Distance dominates, `hav_dist_km_log` alone accounts for 52.96 % of total
-model gain. Everything after that is time and place: pickup/dropoff clusters,
-`is_early_morning`, `hour_of_day`, `is_night`, `pickup_weekday`. Trip volume
-swings six-fold between the 05:00 trough (15,002 trips) and the 18:00 peak (90,600).
-
-Which model predicts most reliably?
-XGBoost, on identical folds. The gap between the linear model (~0.42) and the
-tree models (~0.34) was expected as the relationship is not linear.
-
-Does weather improve the forecast?
-Marginally. Removing all seven weather features costs 0.0013 RMSE, about
-0.38 %, or one to two cross-validation standard deviations. Real, consistent,
-and far smaller than the effort of building the join. Stated plainly because
-"we built it, and it barely helped" is a result, not a failure.
-
-## Notebooks
-
-Read in this order. All three are committed with their outputs, so they render
-in full on GitHub without running anything.
-
-| Notebook                                   | What it covers                                                                                                         |
-|--------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
-| [taxi.ipynb](notebooks/taxi.ipynb)         | Raw trip data: why `dropoff_datetime` is excluded, four data-quality issues, why the target is log-transformed         |
-| [weather.ipynb](notebooks/weather.ipynb)   | Hourly weather: unit conversion, the trailing-whitespace defect in `conditions`, which extremes are clipping artefacts |
-| [modeling.ipynb](notebooks/modeling.ipynb) | Baseline, model comparison, the weather ablation, feature importance, residual analysis                                |
-
-Two findings from the EDA that shaped everything downstream:
-
-- `trip_duration` is exactly `dropoff_datetime - pickup_datetime`, for all
-  1,458,644 rows, to the second. Handing a model `dropoff_datetime` lets it
-  recover the target by subtraction, so it sits in `DROPPED_FEATURES`. It is
-  also unavailable at prediction time, the trip has not finished.
-- Cleaning flags, then excludes. Out-of-range values are clipped to the boundary
-    and marked in a `*_invalid` column. 16,660 rows (1.14 %) trip at least one
-    check (coordinates outside the configured bounds, passenger count outside its
-    limits, or a trip shorter than 60 s or longer than 3 h). The modeling notebook
-    removes these rows before the train/test split, so models are trained and
-    scored on 1,441,984 trips. The flags are not model features.
-
-## Project structure
-
-```
-src/nyc_taxi/
-├── config/          # all tunables: feature allow/deny lists, cleaning
-│                    # bounds, hyper-parameters, every filesystem path
-├── features/        # per-column feature engineering (taxi, weather,
-│                    # distance, clustering)
-├── pipelines/       # raw -> processed -> merged, plus model building,
-│                    # training and feature importance
-├── visuals/         # EDA and residual plots
-├── data_io.py       # Kaggle download, unpack, pickle cache
-├── frames.py        # type-narrowing pandas readers
-└── main.py          # build every dataset in dependency order
-
-notebooks/           # the analysis, with committed outputs
-tests/               # 69 tests
-data/                # gitignored; created on demand
-```
-
-Paths are resolved from `pyproject.toml` upward, so every entry point behaves
-the same whether it runs from `notebooks/`, `src/` or the repository root.
-
-## Setup, build, test, and run
-
-### 1. Install uv
-
-[uv](https://docs.astral.sh/uv/) manages the virtual environment, the Python
-version and the dependencies together.
-
-### 2. Create the environment and install everything
+**Requirements:** [uv](https://docs.astral.sh/uv/), the Kaggle API credentials needed to download the input data, and (for XGBoost on some macOS systems) OpenMP (`brew install libomp`). The repository pins Python 3.11 in `.python-version`; `pyproject.toml` permits Python 3.11–3.13.
 
 ```bash
-uv sync --extra xgb        # plus `brew install libomp` on macOS
+git clone https://github.com/Wendo99/NYC-Taxi-Trip-Duration.git
+cd NYC-Taxi-Trip-Duration
+uv sync --extra dev --extra xgb
+uv run pytest
+uv run python -m nyc_taxi.main
 ```
 
-One command does all of it:
+The last command runs the taxi, weather and merge pipelines in dependency order. Its principal outputs are:
 
-- creates `.venv/` in the project root
-- downloads Python 3.11 if it is not already present (the version is pinned in
-  `.python-version`)
-- installs the exact versions from `uv.lock` — not "whatever PyPI ships today"
+- `data/processed/taxi_clean.csv` — processed taxi records and features
+- `data/processed/weather_clean.csv` — processed hourly weather observations
+- `data/processed/taxi_weather.csv` — merged table
 
-#### Get Kaggle Credentials
+The package creates directories for processed data, caches and other outputs. Most generated outputs are Git-ignored. Data download requires Kaggle access; local pickle caches are reused once available.
 
-Kaggle credentials are needed only to download the raw data. Create a token at kaggle.com →
-Settings → API and save it to ~/.kaggle/access_token
+**Kaggle authentication:** Configure the [Kaggle API](https://github.com/Kaggle/kaggle-api) using `~/.kaggle/kaggle.json` or the `KAGGLE_USERNAME` and `KAGGLE_KEY` environment variables. Accept the [competition rules](https://www.kaggle.com/competitions/nyc-taxi-trip-duration) if Kaggle requires this before download. Never commit API credentials.
 
-### 3. Run things
+To explore the analysis without running the pipeline, view the committed notebook outputs: [taxi](notebooks/taxi.ipynb), [weather](notebooks/weather.ipynb), then [modeling](notebooks/modeling.ipynb).
 
-```bash
-uv run python -m nyc_taxi.main    # build every dataset
+## Architecture and data flow
+
+```text
+Kaggle taxi + weather data
+          |
+          v
+  data_io.py: download, extract, cache
+          |
+          +----------------------------+
+          |                            |
+          v                            v
+  taxi_pipeline.py             weather_pipeline.py
+  flag, clean, engineer        convert, aggregate, classify
+          |                            |
+          +-------------+--------------+
+                        v
+                merge_pipeline.py
+              validated left join
+                        |
+                        v
+                processed CSV files
+                        |
+                        v
+              notebooks and models
 ```
 
-then run the notebooks manually starting with `taxi.ipynb` followed by `weather.ipynb` and
-`modeling.ipynb`
+| Component | Responsibility |
+| --- | --- |
+| [`config/`](src/nyc_taxi/config/) | Central configuration of filesystem paths, feature lists, cleaning bounds and hyperparameters |
+| [`data_io.py`](src/nyc_taxi/data_io.py) | Download, extraction and caching of raw data |
+| [`features/`](src/nyc_taxi/features/) | Taxi, weather, geographic and distance feature functions |
+| [`pipelines/`](src/nyc_taxi/pipelines/) | Dataset construction, merging, model training and feature importance |
+| [`visuals/`](src/nyc_taxi/visuals/) | Exploratory plots and model diagnostics |
+| [`frames.py`](src/nyc_taxi/frames.py) | DataFrame loading helpers |
+| [`main.py`](src/nyc_taxi/main.py) | Run the processing stages |
+| [`tests/`](tests/) | Automated tests for transformations, interfaces and regression behaviour |
 
-#### Run Tests
+The importable `nyc_taxi` package uses a conventional `src/` layout with a build backend defined in [`pyproject.toml`](pyproject.toml). Dependency resolution is recorded in [`uv.lock`](uv.lock). Paths are resolved by locating the project-level `pyproject.toml` rather than assuming a particular working directory.
 
-If you would like to run the tests you additionally need to sync uv again like:
+## Testing and data validation
+
+The repository contains 69 pytest tests, including characterization tests, tests of DataFrame shapes and types, standalone module imports, joins, and model-related helpers. Run them with:
 
 ```bash
 uv sync --extra dev
-```
-
-and then run the test suite:
-
-```bash
 uv run pytest
 ```
 
-## Known limitations
+Three particularly important data contracts are:
 
-- No routed distance. Haversine understates real travel distance; OSRM is
-  the most obvious route for improvement.
-- Model selection used a 300 k subsample. The ranking is fair, every model
-  saw identical folds, but the absolute CV figures are slightly pessimistic
-  against the full-data result.
-- Hyperparameters are fixed, taken from an earlier randomized search (reproducible via
-  `search_hyperparameters`; the spaces live in
-  `config/model_constants.py`) rather than re-tuned.
+1. **No target leakage.** `dropoff_datetime` is not a predictor because trip duration is the difference between dropoff and pickup times, and the dropoff timestamp is unavailable at prediction time. This equality was observed for all 1,458,644 raw trips.
+2. **Explicit invalid-record handling.** Configurable bounds flag and clip out-of-range values. The modelling notebook excludes 16,660 flagged trips (1.14%) before splitting the data, leaving 1,441,984 trips for modelling; the flags are not model features.
+3. **Safe data integration.** `merge_taxi_weather` retains taxi records with unmatched weather observations and validates a `many_to_one` relationship. Duplicate weather keys raise an error rather than silently multiplying rows.
 
-## Data
+For example, the merge function can be exercised with synthetic data without downloading the full dataset:
 
-### Taxi trips
+```python
+import pandas as pd
+from nyc_taxi.pipelines.merge_pipeline import merge_taxi_weather
 
-[Kaggle competition](https://www.kaggle.com/c/nyc-taxi-trip-duration/overview)
-· [NYC TLC source](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)
+trips = pd.DataFrame({"id": ["a", "b"], "hour_of_year": [10, 11]})
+weather = pd.DataFrame({"hour_of_year": [10], "temp_c": [12.0]})
+combined = merge_taxi_weather(trips, weather)
+print(combined[["id", "temp_c"]])
+# Both trips remain; the missing weather value for "b" is NaN.
+```
 
-`train.csv` holds 1,458,644 trips with no missing values, no duplicate ids and
-no duplicated rows.
+The tests are intended to guard against regressions. Characterization tests record current behaviour and should not all be interpreted as assertions of ideal behaviour.
 
-| Field                                    | Meaning                                                          |
-|------------------------------------------|------------------------------------------------------------------|
-| `id`                                     | unique trip identifier                                           |
-| `vendor_id`                              | provider associated with the record                              |
-| `pickup_datetime` / `dropoff_datetime`   | when the meter was engaged / disengaged                          |
-| `passenger_count`                        | passengers, driver-entered                                       |
-| `pickup_longitude` / `pickup_latitude`   | where the meter was engaged                                      |
-| `dropoff_longitude` / `dropoff_latitude` | where the meter was disengaged                                   |
-| `store_and_fwd_flag`                     | `Y` if the record was held in vehicle memory before transmission |
-| `trip_duration`                          | **target**, in seconds                                           |
+## Results
 
-### Weather
+The held-out test set comprises 288,397 trips excluded from training and model selection. The target is `log1p(trip_duration)`, consistent with the competition's RMSLE formulation.
 
-[NYC 2016 Jan–June hourly weather](https://www.kaggle.com/datasets/pschale/nyc-taxi-wunderground-weather)
+| Held-out test evaluation | Log-RMSE | Reduction vs. baseline |
+| --- | ---: | ---: |
+| Predict the training-set mean | 0.7247 | — |
+| **XGBoost (trained on approximately 1.15 million rows)** | **0.3288** | **54.6%** |
 
-4,392 rows forming a complete hourly grid, 183 days × 24 hours, no gaps,
-covering the entire taxi window with a day to spare. Supplied in imperial
-units and converted on ingest: temperature (°F → °C), windspeed (mph → km/h),
-precipitation and pressure (inches → mm / hPa), plus relative humidity, a
-free-text conditions description, daily precipitation and snow totals, and
-fog / rain / snow flags.
+Model selection used three-fold cross-validation on the same 300,000-row subsample for each candidate:
 
-The two datasets join on `hour_of_year`.
+| Model | Cross-validation log-RMSE | Reported variation (±) | Fit time |
+| --- | ---: | ---: | ---: |
+| **XGBoost** | **0.3404** | 0.0007 | 4 s |
+| Random Forest | 0.3450 | 0.0008 | 61 s |
+| Linear Regression | 0.4228 | 0.0008 | 1 s |
+
+The reported training/test gap was 0.0045. This is encouraging for that evaluation, but it does not establish performance on later or operational data.
+
+### Research questions and findings
+
+**Which characteristics matter most?** Haversine distance (`hav_dist_km_log`) accounted for 52.96% of the reported XGBoost feature gain. Other important signals included pickup/dropoff clusters and time features. Trip volume ranged from 15,002 at 05:00 to 90,600 at 18:00 in the analysed data.
+
+**Which model performs best?** In the reported cross-validation comparison, XGBoost and Random Forest outperformed Linear Regression; XGBoost had the lowest error among the compared models.
+
+**Does weather help?** Removing all seven weather features increased cross-validation log-RMSE by only 0.0013 (approximately 0.38%). The measured improvement was small relative to the added integration complexity.
+
+The [modelling notebook](notebooks/modeling.ipynb) documents model comparison, feature importance, ablation and residual analysis. The [taxi notebook](notebooks/taxi.ipynb) explains leakage avoidance and the [weather notebook](notebooks/weather.ipynb) documents data cleaning and unit conversion.
+
+## Data provenance
+
+**Taxi trips:** [Kaggle NYC Taxi Trip Duration competition](https://www.kaggle.com/competitions/nyc-taxi-trip-duration), sourced from [NYC Taxi & Limousine Commission trip records](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page). The inspected `train.csv` contained 1,458,644 trips, with no missing values, duplicated IDs or duplicate rows. Fields include trip ID, vendor, pickup/dropoff times and coordinates, passenger count, forwarding flag and duration in seconds.
+
+**Weather:** [NYC 2016 hourly weather data](https://www.kaggle.com/datasets/pschale/nyc-taxi-wunderground-weather). The analysed period contains 4,392 hours (183 days × 24 hours). Preprocessing addresses textual conditions, trace precipitation, unit conversions, selected interpolations and hourly aggregation. The repository also includes a [supplementary raw weather file](data/raw/weather2_raw.csv). Taxi and weather records are joined on `hour_of_year`.
+
+## Limitations and future work
+
+- **Distance approximation:** The evaluated model uses Haversine distance, which cannot represent actual road routes. Route-based distance is a possible extension but is not included in the reported evaluation.
+- **Evaluation scope:** Cross-validation used a 300,000-row subsample, whereas the reported held-out result followed training on the larger dataset. These are different evaluation settings.
+- **Model configuration:** Fixed hyperparameters originated in an earlier randomized search. A search helper and the associated parameter spaces remain in [`training.py`](src/nyc_taxi/pipelines/training.py) and [`model_constants.py`](src/nyc_taxi/config/model_constants.py); hyperparameters are not re-tuned on each run.
+- **Deployment:** This is an offline academic prediction project, not a live trip-time estimation service.
